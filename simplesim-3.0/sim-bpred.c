@@ -68,6 +68,8 @@
 
 /*
  * This file implements a branch predictor analyzer.
+ *
+ * THIS IS THE VERSION OF THE SIMULATOR WE NEED TO USE, IT'S WHAT THEY DID IN THE PAPER
  */
 
 /* simulated registers */
