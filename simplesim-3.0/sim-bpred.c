@@ -181,6 +181,8 @@ sim_reg_options(struct opt_odb_t *odb)
 		   btb_config, btb_nelt, &btb_nelt,
 		   /* default */btb_config,
 		   /* print */TRUE, /* format */NULL, /* !accrue */FALSE);
+
+  //(AHEAD)
 }
 
 /* check simulator-specific option values */
@@ -258,6 +260,7 @@ sim_check_options(struct opt_odb_t *odb, int argc, char **argv)
 			  /* btb assoc */btb_config[1],
 			  /* ret-addr stack size */ras_size);
     }
+  //(AHEAD)
   else
     fatal("cannot parse predictor type `%s'", pred_type);
 }
@@ -469,6 +472,8 @@ sim_main(void)
 
       /* get the next instruction to execute */
       MD_FETCH_INST(inst, mem, regs.regs_PC);
+	  //(AHEAD) Find file where MD_FETCH_INST is defined, so we can at the same time hit the small table
+	  //Add an if for it 
 
       /* keep an instruction count */
       sim_num_insn++;
@@ -483,6 +488,8 @@ sim_main(void)
       MD_SET_OPCODE(op, inst);
 
       /* execute the instruction */
+	  //(AHEAD) Read through the rest and figure out where writeback takes place 
+	  //so you can inject in PE, with LTR, LBR, and EBTB
       switch (op)
 	{
 #define DEFINST(OP,MSK,NAME,OPFORM,RES,FLAGS,O1,O2,I1,I2,I3)		\
