@@ -148,7 +148,7 @@ sim_reg_options(struct opt_odb_t *odb)
 	       /* print */TRUE, /* format */NULL);
 
   opt_reg_string(odb, "-bpred",
-		 "branch predictor type {nottaken|taken|bimod|2lev|comb}",
+		 "branch predictor type {nottaken|taken|bimod|2lev|comb|ahead}",
                  &pred_type, /* default */"bimod",
                  /* print */TRUE, /* format */NULL);
 
@@ -471,7 +471,8 @@ sim_main(void)
 #endif /* TARGET_ALPHA */
 
       /* get the next instruction to execute */
-      MD_FETCH_INST(inst, mem, regs.regs_PC);
+      MD_FETCH_INST(inst, mem, regs.regs_PC); //This is literally pulling the next instruction into memory and storing it as "inst"
+	  
 	  //(AHEAD) Find file where MD_FETCH_INST is defined, so we can at the same time hit the small table
 	  //Add an if for it 
 
@@ -524,6 +525,7 @@ sim_main(void)
 
 	  sim_num_branches++;
 
+	  //(AHEAD) Here is where prediction happens in the basic thing
 	  if (pred)
 	    {
 	      /* get the next predicted fetch address */

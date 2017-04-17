@@ -114,7 +114,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     /* no other state */
     break;
   case BPredAhead:
-	  /* add some stuff here! */
+	  /* (AHEAD) add some stuff here! */
 	  /* things we might want to do here - allocate the small and large tables, etc*/
 	  panic("ahead prediction not yet implemented, bpred_create part 1");
 	  break;
@@ -175,7 +175,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     break;
   
   case BPredAhead:
-	  /* add some stuff here! */
+	  /* (AHEAD) add some stuff here! */
 	  /* things we might want to do here - allocate the small and large tables, etc*/
 	  panic("ahead prediction not yet implemented, bpred_create part 2");
 	  break;
@@ -267,7 +267,7 @@ bpred_dir_create (
     /* no other state */
     break;
   case BPredAhead:
-	/* add some stuff here! */
+	/* (AHEAD) add some stuff here! */
 	/* things we might want to do here - allocate the small and large tables, etc*/
 	  panic("ahead prediction not yet implemented, bpred_dir_create");
 	break;
@@ -307,6 +307,7 @@ bpred_dir_config(
     break;
 
   case BPredAhead:
+	/* (AHEAD) Need to print configuration info here*/
 	fprintf(stream, "ahead prediction placeholder\n");
 	  panic("ahead prediction not yet implemented, bpred_dir_config");
 	  break;
@@ -354,6 +355,7 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     break;
 
   case BPredAhead:
+	  /*(AHEAD)*/
     /*add some bpred_dir_config info, edit that code as needed*/
 	  panic("ahead prediction not yet implemented, bpred_config");
 	  
@@ -491,6 +493,7 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
   stat_reg_formula(sdb, buf,
 		   "RAS prediction rate (i.e., RAS hits/used RAS)",
 		   buf1, "%9.4f");
+  /*(AHEAD) Add information here to cover changes with BHTP?*/
 }
 
 void
@@ -567,7 +570,7 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
     case BPredNotTaken:
       break;
 	case BPredAhead:
-	  /*add stuff here as needed*/
+	  /*(AHEAD) add stuff here as needed*/
 		panic("ahead prediction not yet implemented, bpred_dir_lookup");
 	  break;
     default:
@@ -576,6 +579,8 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
 
   return (char *)p;
 }
+
+/*(AHEAD) Definitely need to look at what's going on with bpred_lookup*/
 
 /* probe a predictor for a next fetch address, the predictor is probed
    with branch address BADDR, the branch target is BTARGET (used for
@@ -662,7 +667,7 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	  return btarget;
 	}
 	case BPredAhead:
-		/*see if we need to do anything here*/
+		/* (AHEAD) see if we need to do anything here*/
 		panic("ahead prediction not yet implemented, bpred_lookup");
     default:
       panic("bogus predictor class");

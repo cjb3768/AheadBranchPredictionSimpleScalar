@@ -116,6 +116,18 @@ struct bpred_btb_ent_t {
   struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
 };
 
+/* (AHEAD) an entry in an EBTB */
+/* Need to figure out what "seqt_addr", "next_br_s", and "next_br_t" should do */
+struct bpred_ebtb_ent_t {
+	md_addr_t br_addr;		/* address of branch being tracked */
+	enum md_opcode op;		/* opcode of branch corresp. to addr */
+	md_addr_t seqt_addr;		/* address of next sequential branch to be tracked */
+	md_addr_t next_br_s;		/* ? */
+	md_addr_t target;		/* last destination of branch when taken */
+	md_addr_t next_target;		/* target of next branch to be taken */
+	struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
+};
+
 /* direction predictor def */
 struct bpred_dir_t {
   enum bpred_class class;	/* type of predictor */
