@@ -489,8 +489,8 @@ sim_main(void)
       MD_SET_OPCODE(op, inst);
 
       /* execute the instruction */
-	  //(AHEAD) Read through the rest and figure out where writeback takes place 
-	  //so you can inject in PE, with LTR, LBR, and EBTB
+	  /*(AHEAD) Read through the rest and figure out where writeback takes place 
+	  so you can inject in PE, with LTR, LBR, and EBTB */
       switch (op)
 	{
 #define DEFINST(OP,MSK,NAME,OPFORM,RES,FLAGS,O1,O2,I1,I2,I3)		\
@@ -525,7 +525,7 @@ sim_main(void)
 
 	  sim_num_branches++;
 
-	  //(AHEAD) Here is where prediction happens in the basic thing
+	  /* (AHEAD) Here is where prediction would happen normally, during execute. */
 	  if (pred)
 	    {
 	      /* get the next predicted fetch address */
@@ -544,7 +544,9 @@ sim_main(void)
 		  /* no predicted taken target, attempt not taken target */
 		  pred_PC = regs.regs_PC + sizeof(md_inst_t);
 		}
-
+		  /* (AHEAD) This sounds like, if it were a branch prediction, it would be doing "writeback" */
+		  /* We will want to do a lot in bpred_update here, specifically, I believe, using BHTP to   */
+		  /* Speculate upon future branches, maintain LBR and LTR, etc.*/
 	      bpred_update(pred,
 			   /* branch addr */regs.regs_PC,
 			   /* resolved branch target */regs.regs_NPC,

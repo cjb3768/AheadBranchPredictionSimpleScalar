@@ -48,6 +48,7 @@
  * Copyright (C) 1994-2003 by Todd M. Austin, Ph.D. and SimpleScalar, LLC.
  */
 
+/* (AHEAD) This is the header for our ISA; look here if need be. */
 
 #ifndef ALPHA_H
 #define ALPHA_H
