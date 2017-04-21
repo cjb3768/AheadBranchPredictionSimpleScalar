@@ -462,6 +462,13 @@ sim_main(void)
     dlite_main(regs.regs_PC - sizeof(md_inst_t), regs.regs_PC,
 	       sim_num_insn, &regs, mem);
 
+  /* (AHEAD) Prefetch a number of instructions here to offset ahead prediction */
+  /* Use MD_FETCH_INST and MD_SET_OPCODE */
+  if (pred && pred->class == BPredAhead) {
+	  //do early prediction
+  }
+  
+  //run simulation
   while (TRUE)
     {
       /* maintain $r0 semantics */

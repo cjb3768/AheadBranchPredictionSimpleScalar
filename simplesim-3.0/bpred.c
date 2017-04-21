@@ -177,6 +177,8 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredAhead:
 	  /* (AHEAD) add some stuff here! */
 	  /* things we might want to do here - allocate the small and large tables, etc*/
+
+	  //allocate tables, registers - look above to see how.
 	  panic("ahead prediction not yet implemented, bpred_create part 2");
 	  break;
 
@@ -708,6 +710,8 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
     }
 #endif /* !RAS_BUG_COMPATIBLE */
   
+  /* (AHEAD) We're gonna need to look at changing basically all of this below here */
+
   /* not a return. Get a pointer into the BTB */
   index = (baddr >> MD_BR_SHIFT) & (pred->btb.sets - 1);
 
@@ -774,7 +778,7 @@ bpred_recover(struct bpred_t *pred,	/* branch predictor instance */
   pred->retstack.tos = stack_recover_idx;
 }
 
-/*TO DO - Add functionality to bpred_update to handle ahead branch prediction!, BPredAhead*/
+/*(AHEAD) Add functionality to bpred_update to handle ahead branch prediction!, BPredAhead*/
 
 /* update the branch predictor, only useful for stateful predictors; updates
    entry for instruction type OP at address BADDR.  BTB only gets updated

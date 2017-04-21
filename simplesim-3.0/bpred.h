@@ -53,6 +53,11 @@
 #define BPRED_H
 
 #define dassert(a) assert(a)
+/*(AHEAD) EBTB Macros*/
+#define EBTB0_SIZE 1024
+#define EBTB0_ASSOC 4
+#define EBTB1_SIZE 64
+#define EBTB1_ASSOC 8
 
 #include <stdio.h>
 
@@ -147,6 +152,20 @@ struct bpred_dir_t {
   } config;
 };
 
+/* (AHEAD) Pulling btb definition outside of bpred_t*/
+struct btb_t{
+	int sets;			/* num BTB sets */
+	int assoc;			/* BTB associativity */
+	struct bpred_btb_ent_t *btb_data; /* BTB addr-prediction table */
+};
+
+/* (AHEAD) Create struct for Extended Branch Table Buffers */
+struct ebtb_t {
+	unsigned int sets;
+	unsigned int assoc;
+	struct bpred_ebtb_ent_t *ebtb_data;
+};
+
 /* branch predictor def */
 struct bpred_t {
   enum bpred_class class;	/* type of predictor */
@@ -156,11 +175,15 @@ struct bpred_t {
     struct bpred_dir_t *meta;	  /* meta predictor */
   } dirpred;
 
-  struct {
-    int sets;			/* num BTB sets */
-    int assoc;			/* BTB associativity */
-    struct bpred_btb_ent_t *btb_data; /* BTB addr-prediction table */
-  } btb;
+  struct btb_t btb; //(AHEAD) This is residual; we haven't removed all references to this in the code
+
+  /* (AHEAD) Define prediction table, ebtbs, last target register and last branch register */
+
+  struct btb_t pred_table; //"small table" from paper
+  struct ebtb_t ebtb0; 
+  struct ebtb_t ebtb1; 
+  md_addr_t last_target_register; //last target register
+  md_addr_t last_branch_register; //last branch register
 
   struct {
     int size;			/* return-address stack size */
