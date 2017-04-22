@@ -53,10 +53,13 @@
 #define BPRED_H
 
 #define dassert(a) assert(a)
-/*(AHEAD) EBTB Macros*/
-#define EBTB0_SIZE 1024
+/*(AHEAD) Macros*/
+#define PRED_TABLE_SIZE 4
+//EBTB0 has 1k entries, 4way associativity
+#define EBTB0_SETS 256	
 #define EBTB0_ASSOC 4
-#define EBTB1_SIZE 64
+//EBTB1 has 64 entries, 8 way associativity
+#define EBTB1_SETS 8
 #define EBTB1_ASSOC 8
 
 #include <stdio.h>

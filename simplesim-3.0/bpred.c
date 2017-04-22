@@ -84,6 +84,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
   switch (class) {
 	  //add a case for our ahead predictor
+  case BPredAhead:	
   case BPredComb:
     /* bimodal component */
     pred->dirpred.bimod = 
@@ -113,17 +114,84 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredNotTaken:
     /* no other state */
     break;
-  case BPredAhead:
-	  /* (AHEAD) add some stuff here! */
-	  /* things we might want to do here - allocate the small and large tables, etc*/
-	  panic("ahead prediction not yet implemented, bpred_create part 1");
-	  break;
+
   default:
     panic("bogus predictor class");
   }
 
   /* allocate ret-addr stack */
   switch (class) {
+  case BPredAhead:
+	/*(AHEAD) Allocate EBTBs, Registers, and Small Table*/
+	//Small table
+	if (!(pred->pred_table.btb_data = calloc(PRED_TABLE_SIZE, sizeof(struct bpred_btb_ent_t))))
+		fatal("cannot allocate pred_table");
+	pred->pred_table.sets = 1;
+	pred->pred_table.assoc = PRED_TABLE_SIZE;
+
+	if (pred->pred_table.assoc > 1)
+	{
+	for (i=0; i < (pred->pred_table.assoc*pred->pred_table.sets); i++)
+	  {
+	    if (i % pred->pred_table.assoc != pred->pred_table.assoc - 1)
+	      pred->pred_table.btb_data[i].next = &pred->pred_table.btb_data[i+1];
+	    else
+	      pred->pred_table.btb_data[i].next = NULL;
+	    
+	    if (i % pred->pred_table.assoc != pred->pred_table.assoc - 1)
+	      pred->pred_table.btb_data[i+1].prev = &pred->pred_table.btb_data[i];
+	  }
+	}
+
+	//EBTB0
+	if (!(pred->ebtb0.ebtb_data = calloc(EBTB0_SETS * EBTB0_ASSOC, sizeof(struct bpred_ebtb_ent_t))))
+		fatal("cannot allocate ebtb0");
+	pred->ebtb0.sets = EBTB0_SETS;
+	pred->ebtb0.assoc = EBTB0_ASSOC;
+
+	if (pred->ebtb0.assoc > 1)
+	{
+	for (i=0; i < (pred->ebtb0.assoc*pred->ebtb0.sets); i++)
+	  {
+	    if (i % pred->ebtb0.assoc != pred->ebtb0.assoc - 1)
+	      pred->ebtb0.ebtb_data[i].next = &pred->ebtb0.ebtb_data[i+1];
+	    else
+	      pred->ebtb0.ebtb_data[i].next = NULL;
+	    
+	    if (i % pred->ebtb0.assoc != pred->ebtb0.assoc - 1)
+	      pred->ebtb0.ebtb_data[i+1].prev = &pred->ebtb0.ebtb_data[i];
+	  }
+	}
+
+	//EBTB1
+	if (!(pred->ebtb1.ebtb_data = calloc(EBTB1_SETS * EBTB1_ASSOC, sizeof(struct bpred_ebtb_ent_t))))
+		fatal("cannot allocate ebtb1");
+	pred->ebtb1.sets = EBTB1_SETS;
+	pred->ebtb1.assoc = EBTB1_ASSOC;
+
+	if (pred->ebtb1.assoc > 1)
+	{
+	for (i=0; i < (pred->ebtb1.assoc*pred->ebtb1.sets); i++)
+	  {
+	    if (i % pred->ebtb1.assoc != pred->ebtb1.assoc - 1)
+	      pred->ebtb1.ebtb_data[i].next = &pred->ebtb1.ebtb_data[i+1];
+	    else
+	      pred->ebtb1.ebtb_data[i].next = NULL;
+	    
+	    if (i % pred->ebtb1.assoc != pred->ebtb1.assoc - 1)
+	      pred->ebtb1.ebtb_data[i+1].prev = &pred->ebtb1.ebtb_data[i];
+	  }
+	}
+	
+	//last_target_register
+	if (!(pred->last_target_register = calloc(1, sizeof(md_addr_t))))
+		fatal("cannot allocate last_target_register");
+
+	//last_branch_register
+	if (!(pred->last_branch_register = calloc(1, sizeof(md_addr_t))))
+		fatal("cannot allocate last_branch_register");
+
+
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
@@ -173,15 +241,6 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredNotTaken:
     /* no other state */
     break;
-  
-  case BPredAhead:
-	  /* (AHEAD) add some stuff here! */
-	  /* things we might want to do here - allocate the small and large tables, etc*/
-
-	  //allocate tables, registers - look above to see how.
-	  panic("ahead prediction not yet implemented, bpred_create part 2");
-	  break;
-
   default:
     panic("bogus predictor class");
   }

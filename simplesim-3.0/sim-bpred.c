@@ -261,6 +261,30 @@ sim_check_options(struct opt_odb_t *odb, int argc, char **argv)
 			  /* ret-addr stack size */ras_size);
     }
   //(AHEAD)
+  else if (!mystricmp(pred_type, "ahead"))
+    {
+      /*need both the parts for comb predictor and ahead predictor*/
+      if (twolev_nelt != 4)
+	fatal("bad 2-level pred config (<l1size> <l2size> <hist_size> <xor>)");
+      if (bimod_nelt != 1)
+	fatal("bad bimod predictor config (<table_size>)");
+      if (comb_nelt != 1)
+	fatal("bad combining predictor config (<meta_table_size>)");
+      if (btb_nelt != 2)
+	fatal("bad btb config (<num_sets> <associativity>)");
+      /*ahead parts*/
+      pred = bpred_create(BPredAhead,
+			  /* bimod table size */bimod_config[0],
+			  /* l1 size */twolev_config[0],
+			  /* l2 size */twolev_config[1],
+			  /* meta table size */comb_config[0],
+			  /* history reg size */twolev_config[2],
+			  /* history xor address */twolev_config[3],
+			  /* btb sets */btb_config[0],
+			  /* btb assoc */btb_config[1],
+			  /* ret-addr stack size */ras_size);
+    }
+    }
   else
     fatal("cannot parse predictor type `%s'", pred_type);
 }
