@@ -53,11 +53,19 @@
 #define BPRED_H
 
 #define dassert(a) assert(a)
-/*(AHEAD) EBTB Macros*/
-#define EBTB0_SIZE 1024
-#define EBTB0_ASSOC 4
-#define EBTB1_SIZE 64
-#define EBTB1_ASSOC 8
+/*(AHEAD) Macros*/
+#define PRED_TABLE_SIZE 4
+//DBPB has 1k entries, 4 way associativity
+#define DBPB_SETS 256	
+#define DBPB_ASSOC 4
+//SBPB has 64 entries, 8 way associativity
+#define SBPB_SETS 8
+#define SBPB_ASSOC 8
+//TPRT
+#define TPRT_SIZE 1024
+//TPHT
+#define TPHT_SIZE 1024
+
 
 #include <stdio.h>
 
@@ -113,25 +121,6 @@ enum bpred_class {
   BPredAhead            /* ahead branch prediction */
 };
 
-/* an entry in a BTB */
-struct bpred_btb_ent_t {
-  md_addr_t addr;		/* address of branch being tracked */
-  enum md_opcode op;		/* opcode of branch corresp. to addr */
-  md_addr_t target;		/* last destination of branch when taken */
-  struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
-};
-
-/* (AHEAD) an entry in an EBTB */
-/* Need to figure out what "seqt_addr", "next_br_s", and "next_br_t" should do */
-struct bpred_ebtb_ent_t {
-	md_addr_t br_addr;		/* address of branch being tracked */
-	enum md_opcode op;		/* opcode of branch corresp. to addr */
-	md_addr_t seqt_addr;		/* address of next sequential branch to be tracked */
-	md_addr_t next_br_s;		/* ? */
-	md_addr_t target;		/* last destination of branch when taken */
-	md_addr_t next_target;		/* target of next branch to be taken */
-	struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
-};
 
 /* direction predictor def */
 struct bpred_dir_t {
@@ -152,6 +141,45 @@ struct bpred_dir_t {
   } config;
 };
 
+/* an entry in a BTB */
+struct bpred_btb_ent_t {
+  md_addr_t addr;		/* address of branch being tracked */
+  enum md_opcode op;		/* opcode of branch corresp. to addr */
+  md_addr_t target;		/* last destination of branch when taken */
+  struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
+};
+
+/* (AHEAD) an entry in an EBTB */
+/* Need to figure out what "seqt_addr", "next_br_s", and "next_br_t" should do */
+struct bpred_ebtb_ent_t {
+	md_addr_t br_addr;		/* address of branch being tracked */
+	enum md_opcode op;		/* opcode of branch corresp. to addr */
+	md_addr_t seqt_addr;		/* sequential address of current branch */
+	md_addr_t next_br_s;		/* address of next sequentially predicted branch */
+	md_addr_t target;		/* last destination of branch when taken */
+	md_addr_t next_target;		/* target of next branch to be taken */
+	struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
+};
+
+
+/* (AHEAD) Create struct for TPRT entries */
+struct tprt_ent_t {
+	//needs indirect branch address, and target path reg
+
+  md_addr_t addr;		/* address of branch being tracked */
+  enum md_opcode op;		/* opcode of branch corresp. to addr */
+  md_addr_t target;		/* last destination of branch when taken */
+  struct tprt_ent_t *prev, *next; /* lru chaining pointers */
+};
+
+/* (AHEAD) Create struct for TPHT entries */
+struct tpht_ent_t{
+	//needs to hold xor code from tprt and a next target number
+   md_addr_t tph_xor_code;
+   md_addr_t next_targ_number;
+   struct tpht_ent_t *prev, *next; /* lru chaining pointers */
+}
+
 /* (AHEAD) Pulling btb definition outside of bpred_t*/
 struct btb_t{
 	int sets;			/* num BTB sets */
@@ -159,12 +187,57 @@ struct btb_t{
 	struct bpred_btb_ent_t *btb_data; /* BTB addr-prediction table */
 };
 
-/* (AHEAD) Create struct for Extended Branch Table Buffers */
-struct ebtb_t {
+/* (AHEAD) Create struct for DBPB entries */
+struct dbpb_ent_t {
+	md_addr_t addr;		/* address of branch being tracked, also for tag matching*/
+  	enum md_opcode op;		/* opcode of branch corresp. to addr */
+  	md_addr_t target;		/* last destination of branch when taken */
+  	struct dbpb_ent_t *prev, *next; /* lru chaining pointers */
+}
+
+
+
+/* (AHEAD) Create struct for Dynamic Branch Predictor Buffer */
+struct dbpb_t {
 	unsigned int sets;
 	unsigned int assoc;
-	struct bpred_ebtb_ent_t *ebtb_data;
+	struct dbpb_ent_t *dbpb_data;
 };
+
+/* (AHEAD) Create struct for tracking multiple targets and their frequency */
+struct targ_count_pair{
+	unsigned int counter;
+	md_addr_t address;
+}
+
+/* (AHEAD) Create struct for SBPT entries */
+struct sbpb_ent_t {
+	md_addr_t addr;			/* address of branch being tracked, also for tag matching*/
+  	enum md_opcode op;		/* opcode of branch corresp. to addr */
+	unsigned int pred_flag;		/* flag for prediction mode */
+	struct targ_count_pair *targets; /* data entries in table*/
+  	struct sbpb_ent_t *prev, *next; /* lru chaining pointers */
+}
+
+
+/* (AHEAD) Create struct for Speculative Branch Predictor Buffer*/
+struct sbpb_t {
+	unsigned int sets;
+	unsigned int assoc;
+	struct sbpb_ent_t *sbpb_data;
+};
+
+/* (AHEAD) Create struct for TPHT */
+struct tpht_t {
+	unsigned int size;
+	struct tpht_ent_t *tpht_data;
+}
+
+/* (AHEAD) Create struct for TPRT */
+struct tprt_t {
+	unsigned int size;
+	struct tprt_ent_t *tprt_data;
+}
 
 /* branch predictor def */
 struct bpred_t {
@@ -175,13 +248,16 @@ struct bpred_t {
     struct bpred_dir_t *meta;	  /* meta predictor */
   } dirpred;
 
-  struct btb_t btb; //(AHEAD) This is residual; we haven't removed all references to this in the code
+  struct btb_t btb;
 
-  /* (AHEAD) Define prediction table, ebtbs, last target register and last branch register */
+  /* (AHEAD) Define prediction table, ebtbs, last target register, last branch register, and other things */
 
   struct btb_t pred_table; //"small table" from paper
-  struct ebtb_t ebtb0; 
-  struct ebtb_t ebtb1; 
+  struct dbpb_t dbpb; //ebtb0 from paper
+  struct sbpt_t sbpb; //ebtb1 from paper
+  struct tprt_t tprt; //target path register table
+  struct tpht_t tpht; //target path history table
+  unsigned int gbhsr; //global branch history shift register
   md_addr_t last_target_register; //last target register
   md_addr_t last_branch_register; //last branch register
 

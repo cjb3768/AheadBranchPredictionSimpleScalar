@@ -143,47 +143,91 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	  }
 	}
 
-	//EBTB0
-	if (!(pred->ebtb0.ebtb_data = calloc(EBTB0_SETS * EBTB0_ASSOC, sizeof(struct bpred_ebtb_ent_t))))
-		fatal("cannot allocate ebtb0");
-	pred->ebtb0.sets = EBTB0_SETS;
-	pred->ebtb0.assoc = EBTB0_ASSOC;
+	//dbpb
+	if (!(pred->dbpb.dbpb_data = calloc(DBPB_SETS * DBPB_ASSOC, sizeof(struct dbpb_ent_t))))
+		fatal("cannot allocate dbpb");
+	pred->dbpb.sets = DBPB_SETS;
+	pred->dbpb.assoc = DBPB_ASSOC;
 
-	if (pred->ebtb0.assoc > 1)
+	if (pred->dbpb.assoc > 1)
 	{
-	for (i=0; i < (pred->ebtb0.assoc*pred->ebtb0.sets); i++)
+	for (i=0; i < (pred->dbpb.assoc*pred->dbpb.sets); i++)
 	  {
-	    if (i % pred->ebtb0.assoc != pred->ebtb0.assoc - 1)
-	      pred->ebtb0.ebtb_data[i].next = &pred->ebtb0.ebtb_data[i+1];
+	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
+	      pred->dbpb.dbpb_data[i].next = &pred->dbpb.dbpb_data[i+1];
 	    else
-	      pred->ebtb0.ebtb_data[i].next = NULL;
+	      pred->dbpb.dbpb_data[i].next = NULL;
 	    
-	    if (i % pred->ebtb0.assoc != pred->ebtb0.assoc - 1)
-	      pred->ebtb0.ebtb_data[i+1].prev = &pred->ebtb0.ebtb_data[i];
+	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
+	      pred->dbpb.dbpb_data[i+1].prev = &pred->dbpb.dbpb_data[i];
 	  }
 	}
 
-	//EBTB1
-	if (!(pred->ebtb1.ebtb_data = calloc(EBTB1_SETS * EBTB1_ASSOC, sizeof(struct bpred_ebtb_ent_t))))
-		fatal("cannot allocate ebtb1");
-	pred->ebtb1.sets = EBTB1_SETS;
-	pred->ebtb1.assoc = EBTB1_ASSOC;
+	//sbpb
+	if (!(pred->sbpb.sbpb_data = calloc(SBPB_SETS, sizeof(struct sbpb_ent_t))))
+		fatal("cannot allocate sbpb");
+	pred->sbpb.sets = SBPB_SETS;
+	pred->sbpb.assoc = SBPB_ASSOC;
 
-	if (pred->ebtb1.assoc > 1)
+	for (i=0; i < pred->sbpb.sets; i++)
 	{
-	for (i=0; i < (pred->ebtb1.assoc*pred->ebtb1.sets); i++)
-	  {
-	    if (i % pred->ebtb1.assoc != pred->ebtb1.assoc - 1)
-	      pred->ebtb1.ebtb_data[i].next = &pred->ebtb1.ebtb_data[i+1];
-	    else
-	      pred->ebtb1.ebtb_data[i].next = NULL;
-	    
-	    if (i % pred->ebtb1.assoc != pred->ebtb1.assoc - 1)
-	      pred->ebtb1.ebtb_data[i+1].prev = &pred->ebtb1.ebtb_data[i];
-	  }
+	if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
+		fatal("cannot allocate sbpb target_counter pairs");
 	}
+
+	if (pred->sbpb.assoc > 1)
+	{
+	for (i=0; i < pred->sbpb.sets; i++)
+	  {
+	    if (i % pred->sbpb.sets != pred->sbpb.sets - 1)
+	      pred->sbpb.sbpb_data[i].next = &pred->sbpb.sbpb_data[i+1];
+	    else
+	      pred->sbpb.sbpb_data[i].next = NULL;
+	    
+	    if (i % pred->sbpb.sets != pred->sbpb.sets - 1)
+	      pred->sbpb.sbpb_data[i+1].prev = &pred->sbpb.sbpb_data[i];
+	  }
+        }
+
+	//tprt
+	if (!(pred->tprt.tprt_data = calloc(TPRT_SIZE, sizeof(struct tprt_ent_t))))
+		fatal("cannot allocate tprt");
+	pred->tprt.size = TPRT_SIZE;
+
+	for (i=0; i < pred->tprt.size; i++)
+	  {
+	    if (i != pred->tprt.size - 1)
+	      pred->tprt.tprt_data[i].next = &pred->tprt.tprt_data[i+1];
+	    else
+	      pred->tprt.tprt_data[i].next = NULL;
+	    
+	    if (i != pred->tprt.size - 1)
+	      pred->tprt.tprt_data[i+1].prev = &pred->tprt.tprt_data[i];
+	  }
 	
+	//tpht
+	if (!(pred->tpht.tpht_data = calloc(TPHT_SIZE, sizeof(struct tpht_ent_t))))
+		fatal("cannot allocate tpht");
+	pred->tpht.size = TPHT_SIZE;
+
+	for (i=0; i < pred->tpht.size; i++)
+	  {
+	    if (i != pred->tpht.size - 1)
+	      pred->tpht.tpht_data[i].next = &pred->tpht.tpht_data[i+1];
+	    else
+	      pred->tpht.tpht_data[i].next = NULL;
+	    
+	    if (i != pred->tpht.size - 1)
+	      pred->tpht.tpht_data[i+1].prev = &pred->tpht.tpht_data[i];
+	  }
+
 	//last_target_register
+	if (!(pred->last_target_register = calloc(1, sizeof(md_addr_t))))
+		fatal("cannot allocate last_target_register");
+
+	//last_branch_register
+	if (!(pred->last_branch_register = calloc(1, sizeof(md_addr_t))))
+		fatal("cannot allocate last_branch_register");
 
 
   case BPredComb:
@@ -321,11 +365,6 @@ bpred_dir_create (
   case BPredNotTaken:
     /* no other state */
     break;
-  case BPredAhead:
-	/* (AHEAD) add some stuff here! */
-	/* things we might want to do here - allocate the small and large tables, etc*/
-	  panic("ahead prediction not yet implemented, bpred_dir_create");
-	break;
   default:
     panic("bogus branch direction predictor class");
   }
@@ -361,13 +400,6 @@ bpred_dir_config(
     fprintf(stream, "pred_dir: %s: predict not taken\n", name);
     break;
 
-  case BPredAhead:
-	/* (AHEAD) Need to print configuration info here*/
-	fprintf(stream, "ahead prediction placeholder\n");
-	  panic("ahead prediction not yet implemented, bpred_dir_config");
-	  break;
-	break;
-
   default:
     panic("bogus branch direction predictor class");
   }
@@ -379,6 +411,26 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
 	     FILE *stream)		/* output stream */
 {
   switch (pred->class) {
+  case BPredAhead:
+	  /*(AHEAD)*/
+    bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
+    bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
+    bpred_dir_config (pred->dirpred.meta, "meta", stream);
+    fprintf(stream, "btb: %d sets x %d associativity", 
+	    pred->btb.sets, pred->btb.assoc);
+    fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
+    //pred_table
+	fprintf(stream, "small table: %d sets x %d associativity", 
+	    pred->pred_table.sets, pred->pred_table.assoc);
+    //dbpb
+	fprintf(stream, "dbpb: %d sets x %d associativity", 
+	    pred->dbpb.sets, pred->dbpb.assoc);
+    //sbpb
+	fprintf(stream, "sbpb: %d sets x %d associativity", 
+	    pred->sbpb.sets, pred->sbpb.assoc);
+
+    break;
+
   case BPredComb:
     bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
     bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
@@ -409,12 +461,7 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     bpred_dir_config (pred->dirpred.bimod, "nottaken", stream);
     break;
 
-  case BPredAhead:
-	  /*(AHEAD)*/
-    /*add some bpred_dir_config info, edit that code as needed*/
-	  panic("ahead prediction not yet implemented, bpred_config");
-	  
-	break;
+ 
 
   default:
     panic("bogus branch predictor class");
@@ -457,9 +504,9 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
     case BPredNotTaken:
       name = "bpred_nottaken";
       break;
-	case BPredAhead:
-	  name = "bpred_ahead";
-	  break;
+    case BPredAhead:
+      name = "bpred_ahead";
+      break;
     default:
       panic("bogus branch predictor class");
     }
