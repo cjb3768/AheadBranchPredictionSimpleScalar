@@ -979,6 +979,32 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   struct bpred_btb_ent_t *lruhead = NULL, *lruitem = NULL;
   int index, i;
 
+	/*(AHEAD) Put some if in here for ahead branch prediction, and have everything else work on its own (is this needed?)*/
+
+	/*
+	if the branch is in EBTB1 then
+		if the target is not in EBTB1 then
+			add the target to EBTB1;
+		end if
+		update TPHT with target;
+		update TPRT with target;
+		if update the branch too many times then
+			set target path prediction flag disable;
+		end if
+	else
+		if the branch is in EBTB0 then
+			update EBTB0 with target;
+			if update the branch too many times then
+				move the branch and its target to EBTB1;
+				update TPHT and TPRT with target;
+			end if
+		else
+			add the branch and its target to EBTB0;
+		end if
+	end if
+
+	*/
+
   /* don't change bpred state for non-branch instructions or if this
    * is a stateless predictor*/
   if (!(MD_OP_FLAGS(op) & F_CTRL))

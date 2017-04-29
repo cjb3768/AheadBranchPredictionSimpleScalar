@@ -2,20 +2,20 @@
 
 /* SimpleScalar(TM) Tool Suite
  * Copyright (C) 1994-2003 by Todd M. Austin, Ph.D. and SimpleScalar, LLC.
- * All Rights Reserved. 
- * 
+ * All Rights Reserved.
+ *
  * THIS IS A LEGAL DOCUMENT, BY USING SIMPLESCALAR,
  * YOU ARE AGREEING TO THESE TERMS AND CONDITIONS.
- * 
+ *
  * No portion of this work may be used by any commercial entity, or for any
  * commercial purpose, without the prior, written permission of SimpleScalar,
  * LLC (info@simplescalar.com). Nonprofit and noncommercial use is permitted
  * as described below.
- * 
+ *
  * 1. SimpleScalar is provided AS IS, with no warranty of any kind, express
  * or implied. The user of the program accepts full responsibility for the
  * application of the program and the use of any results.
- * 
+ *
  * 2. Nonprofit and noncommercial use is encouraged. SimpleScalar may be
  * downloaded, compiled, executed, copied, and modified solely for nonprofit,
  * educational, noncommercial research, and noncommercial scholarship
@@ -24,13 +24,13 @@
  * solely for nonprofit, educational, noncommercial research, and
  * noncommercial scholarship purposes provided that this notice in its
  * entirety accompanies all copies.
- * 
+ *
  * 3. ALL COMMERCIAL USE, AND ALL USE BY FOR PROFIT ENTITIES, IS EXPRESSLY
  * PROHIBITED WITHOUT A LICENSE FROM SIMPLESCALAR, LLC (info@simplescalar.com).
- * 
+ *
  * 4. No nonprofit user may place any restrictions on the use of this software,
  * including as modified by the user, by any other authorized user.
- * 
+ *
  * 5. Noncommercial and nonprofit users may distribute copies of SimpleScalar
  * in compiled or executable form as set forth in Section 2, provided that
  * either: (A) it is accompanied by the corresponding machine-readable source
@@ -40,11 +40,11 @@
  * must permit verbatim duplication by anyone, or (C) it is distributed by
  * someone who received only the executable form, and is accompanied by a
  * copy of the written offer of source code.
- * 
+ *
  * 6. SimpleScalar was developed by Todd M. Austin, Ph.D. The tool suite is
  * currently maintained by SimpleScalar LLC (info@simplescalar.com). US Mail:
  * 2395 Timbercrest Court, Ann Arbor, MI 48105.
- * 
+ *
  * Copyright (C) 1994-2003 by Todd M. Austin, Ph.D. and SimpleScalar, LLC.
  */
 
@@ -71,7 +71,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	     unsigned int meta_size,	/* meta table size */
 	     unsigned int shift_width,	/* history register width */
 	     unsigned int xor,  	/* history xor address flag */
-	     unsigned int btb_sets,	/* number of sets in BTB */ 
+	     unsigned int btb_sets,	/* number of sets in BTB */
 	     unsigned int btb_assoc,	/* BTB associativity */
 	     unsigned int retstack_size) /* num entries in ret-addr stack */
 {
@@ -84,30 +84,30 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
   switch (class) {
 	  //add a case for our ahead predictor
-  case BPredAhead:	
+  case BPredAhead:
   case BPredComb:
     /* bimodal component */
-    pred->dirpred.bimod = 
+    pred->dirpred.bimod =
       bpred_dir_create(BPred2bit, bimod_size, 0, 0, 0);
 
     /* 2-level component */
-    pred->dirpred.twolev = 
+    pred->dirpred.twolev =
       bpred_dir_create(BPred2Level, l1size, l2size, shift_width, xor);
 
     /* metapredictor component */
-    pred->dirpred.meta = 
+    pred->dirpred.meta =
       bpred_dir_create(BPred2bit, meta_size, 0, 0, 0);
 
     break;
 
   case BPred2Level:
-    pred->dirpred.twolev = 
+    pred->dirpred.twolev =
       bpred_dir_create(class, l1size, l2size, shift_width, xor);
 
     break;
 
   case BPred2bit:
-    pred->dirpred.bimod = 
+    pred->dirpred.bimod =
       bpred_dir_create(class, bimod_size, 0, 0, 0);
 
   case BPredTaken:
@@ -118,6 +118,8 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   default:
     panic("bogus predictor class");
   }
+
+	int i;
 
   /* allocate ret-addr stack */
   switch (class) {
@@ -137,7 +139,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	      pred->pred_table.btb_data[i].next = &pred->pred_table.btb_data[i+1];
 	    else
 	      pred->pred_table.btb_data[i].next = NULL;
-	    
+
 	    if (i % pred->pred_table.assoc != pred->pred_table.assoc - 1)
 	      pred->pred_table.btb_data[i+1].prev = &pred->pred_table.btb_data[i];
 	  }
@@ -157,84 +159,38 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	      pred->dbpb.dbpb_data[i].next = &pred->dbpb.dbpb_data[i+1];
 	    else
 	      pred->dbpb.dbpb_data[i].next = NULL;
-	    
+
 	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
 	      pred->dbpb.dbpb_data[i+1].prev = &pred->dbpb.dbpb_data[i];
 	  }
 	}
 
 	//sbpb
-	if (!(pred->sbpb.sbpb_data = calloc(SBPB_SETS, sizeof(struct sbpb_ent_t))))
+	if (!(pred->sbpb.sbpb_data = calloc(SBPB_ASSOC, sizeof(struct sbpb_ent_t))))
 		fatal("cannot allocate sbpb");
 	pred->sbpb.sets = SBPB_SETS;
 	pred->sbpb.assoc = SBPB_ASSOC;
 
-	for (i=0; i < pred->sbpb.sets; i++)
+	for (i=0; i < pred->sbpb.assoc; i++)
 	{
-	if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
-		fatal("cannot allocate sbpb target_counter pairs");
+		if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
+			fatal("cannot allocate sbpb target_counter pairs");
 	}
-
-	if (pred->sbpb.assoc > 1)
-	{
-	for (i=0; i < pred->sbpb.sets; i++)
-	  {
-	    if (i % pred->sbpb.sets != pred->sbpb.sets - 1)
-	      pred->sbpb.sbpb_data[i].next = &pred->sbpb.sbpb_data[i+1];
-	    else
-	      pred->sbpb.sbpb_data[i].next = NULL;
-	    
-	    if (i % pred->sbpb.sets != pred->sbpb.sets - 1)
-	      pred->sbpb.sbpb_data[i+1].prev = &pred->sbpb.sbpb_data[i];
-	  }
-        }
 
 	//tprt
 	if (!(pred->tprt.tprt_data = calloc(TPRT_SIZE, sizeof(struct tprt_ent_t))))
 		fatal("cannot allocate tprt");
 	pred->tprt.size = TPRT_SIZE;
 
-	for (i=0; i < pred->tprt.size; i++)
-	  {
-	    if (i != pred->tprt.size - 1)
-	      pred->tprt.tprt_data[i].next = &pred->tprt.tprt_data[i+1];
-	    else
-	      pred->tprt.tprt_data[i].next = NULL;
-	    
-	    if (i != pred->tprt.size - 1)
-	      pred->tprt.tprt_data[i+1].prev = &pred->tprt.tprt_data[i];
-	  }
-	
 	//tpht
 	if (!(pred->tpht.tpht_data = calloc(TPHT_SIZE, sizeof(struct tpht_ent_t))))
 		fatal("cannot allocate tpht");
 	pred->tpht.size = TPHT_SIZE;
 
-	for (i=0; i < pred->tpht.size; i++)
-	  {
-	    if (i != pred->tpht.size - 1)
-	      pred->tpht.tpht_data[i].next = &pred->tpht.tpht_data[i+1];
-	    else
-	      pred->tpht.tpht_data[i].next = NULL;
-	    
-	    if (i != pred->tpht.size - 1)
-	      pred->tpht.tpht_data[i+1].prev = &pred->tpht.tpht_data[i];
-	  }
-
-	//last_target_register
-	if (!(pred->last_target_register = calloc(1, sizeof(md_addr_t))))
-		fatal("cannot allocate last_target_register");
-
-	//last_branch_register
-	if (!(pred->last_branch_register = calloc(1, sizeof(md_addr_t))))
-		fatal("cannot allocate last_branch_register");
-
-
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
     {
-      int i;
 
       /* allocate BTB */
       if (!btb_sets || (btb_sets & (btb_sets-1)) != 0)
@@ -256,7 +212,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	      pred->btb.btb_data[i].next = &pred->btb.btb_data[i+1];
 	    else
 	      pred->btb.btb_data[i].next = NULL;
-	    
+
 	    if (i % pred->btb.assoc != pred->btb.assoc - 1)
 	      pred->btb.btb_data[i+1].prev = &pred->btb.btb_data[i];
 	  }
@@ -264,14 +220,14 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
       /* allocate retstack */
       if ((retstack_size & (retstack_size-1)) != 0)
 	fatal("Return-address-stack size must be zero or a power of two");
-      
+
       pred->retstack.size = retstack_size;
       if (retstack_size)
-	if (!(pred->retstack.stack = calloc(retstack_size, 
+	if (!(pred->retstack.stack = calloc(retstack_size,
 					    sizeof(struct bpred_btb_ent_t))))
 	  fatal("cannot allocate return-address-stack");
       pred->retstack.tos = retstack_size - 1;
-      
+
       break;
     }
 
@@ -309,25 +265,25 @@ bpred_dir_create (
   case BPred2Level:
     {
       if (!l1size || (l1size & (l1size-1)) != 0)
-	fatal("level-1 size, `%d', must be non-zero and a power of two", 
+	fatal("level-1 size, `%d', must be non-zero and a power of two",
 	      l1size);
       pred_dir->config.two.l1size = l1size;
-      
+
       if (!l2size || (l2size & (l2size-1)) != 0)
-	fatal("level-2 size, `%d', must be non-zero and a power of two", 
+	fatal("level-2 size, `%d', must be non-zero and a power of two",
 	      l2size);
       pred_dir->config.two.l2size = l2size;
-      
+
       if (!shift_width || shift_width > 30)
 	fatal("shift register width, `%d', must be non-zero and positive",
 	      shift_width);
       pred_dir->config.two.shift_width = shift_width;
-      
+
       pred_dir->config.two.xor = xor;
       pred_dir->config.two.shiftregs = calloc(l1size, sizeof(int));
       if (!pred_dir->config.two.shiftregs)
 	fatal("cannot allocate shift register table");
-      
+
       pred_dir->config.two.l2table = calloc(l2size, sizeof(unsigned char));
       if (!pred_dir->config.two.l2table)
 	fatal("cannot allocate second level table");
@@ -345,7 +301,7 @@ bpred_dir_create (
 
   case BPred2bit:
     if (!l1size || (l1size & (l1size-1)) != 0)
-      fatal("2bit table size, `%d', must be non-zero and a power of two", 
+      fatal("2bit table size, `%d', must be non-zero and a power of two",
 	    l1size);
     pred_dir->config.bimod.size = l1size;
     if (!(pred_dir->config.bimod.table =
@@ -416,18 +372,24 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
     bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
     bpred_dir_config (pred->dirpred.meta, "meta", stream);
-    fprintf(stream, "btb: %d sets x %d associativity", 
+    fprintf(stream, "btb: %d sets x %d associativity",
 	    pred->btb.sets, pred->btb.assoc);
     fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
     //pred_table
-	fprintf(stream, "small table: %d sets x %d associativity", 
+	fprintf(stream, "small table: %d sets x %d associativity",
 	    pred->pred_table.sets, pred->pred_table.assoc);
     //dbpb
-	fprintf(stream, "dbpb: %d sets x %d associativity", 
+	fprintf(stream, "dbpb: %d sets x %d associativity",
 	    pred->dbpb.sets, pred->dbpb.assoc);
     //sbpb
-	fprintf(stream, "sbpb: %d sets x %d associativity", 
+	fprintf(stream, "sbpb: %d sets x %d associativity",
 	    pred->sbpb.sets, pred->sbpb.assoc);
+    //tprt
+	fprintf(stream, "tprt: %d size",
+	    pred->tprt.size);
+    //tpht
+	fprintf(stream, "tpht: %d size",
+	    pred->tpht.size);
 
     break;
 
@@ -435,21 +397,21 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
     bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
     bpred_dir_config (pred->dirpred.meta, "meta", stream);
-    fprintf(stream, "btb: %d sets x %d associativity", 
+    fprintf(stream, "btb: %d sets x %d associativity",
 	    pred->btb.sets, pred->btb.assoc);
     fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
     break;
 
   case BPred2Level:
     bpred_dir_config (pred->dirpred.twolev, "2lev", stream);
-    fprintf(stream, "btb: %d sets x %d associativity", 
+    fprintf(stream, "btb: %d sets x %d associativity",
 	    pred->btb.sets, pred->btb.assoc);
     fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
     break;
 
   case BPred2bit:
     bpred_dir_config (pred->dirpred.bimod, "bimod", stream);
-    fprintf(stream, "btb: %d sets x %d associativity", 
+    fprintf(stream, "btb: %d sets x %d associativity",
 	    pred->btb.sets, pred->btb.assoc);
     fprintf(stream, "ret_stack: %d entries", pred->retstack.size);
     break;
@@ -461,7 +423,7 @@ bpred_config(struct bpred_t *pred,	/* branch predictor instance */
     bpred_dir_config (pred->dirpred.bimod, "nottaken", stream);
     break;
 
- 
+
 
   default:
     panic("bogus branch predictor class");
@@ -518,22 +480,22 @@ bpred_reg_stats(struct bpred_t *pred,	/* branch predictor instance */
   sprintf(buf1, "%s.dir_hits + %s.misses", name, name);
   stat_reg_formula(sdb, buf, "total number of updates", buf1, "%12.0f");
   sprintf(buf, "%s.addr_hits", name);
-  stat_reg_counter(sdb, buf, "total number of address-predicted hits", 
+  stat_reg_counter(sdb, buf, "total number of address-predicted hits",
 		   &pred->addr_hits, 0, NULL);
   sprintf(buf, "%s.dir_hits", name);
-  stat_reg_counter(sdb, buf, 
+  stat_reg_counter(sdb, buf,
 		   "total number of direction-predicted hits "
-		   "(includes addr-hits)", 
+		   "(includes addr-hits)",
 		   &pred->dir_hits, 0, NULL);
   if (pred->class == BPredComb)
     {
       sprintf(buf, "%s.used_bimod", name);
-      stat_reg_counter(sdb, buf, 
-		       "total number of bimodal predictions used", 
+      stat_reg_counter(sdb, buf,
+		       "total number of bimodal predictions used",
 		       &pred->used_bimod, 0, NULL);
       sprintf(buf, "%s.used_2lev", name);
-      stat_reg_counter(sdb, buf, 
-		       "total number of 2-level predictions used", 
+      stat_reg_counter(sdb, buf,
+		       "total number of 2-level predictions used",
 		       &pred->used_2lev, 0, NULL);
     }
   sprintf(buf, "%s.misses", name);
@@ -682,14 +644,94 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
   return (char *)p;
 }
 
-/*(AHEAD) Definitely need to look at what's going on with bpred_lookup*/
+/* (Ahead) Subroutine to help XOR an address and register and lookup
+   the result in a table */
+md_addr_t
+tprt_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
+{
+	if (!indir_br_addr)
+		panic("No address given");
+
+	md_addr_t lookup_addr = indir_br_addr % pred->tprt.size;
+
+	struct tprt_ent_t *entry = pred->tprt.tprt_data + lookup_addr;
+
+	return entry->target;
+}
+
+/* (Ahead) Subroutine to help XOR an address and register and lookup
+   the result in a table */
+md_addr_t
+tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target)
+{
+	if (!indir_br_addr || !target)
+		panic("No address given");
+
+	md_addr_t lookup_addr = (target ^ indir_br_addr) % pred->tpht.size;
+
+	struct tpht_ent_t *entry = pred->tpht.tpht_data + lookup_addr;
+
+	return entry->next_targ_number;
+}
+
+/* (Ahead) Bit of a hack, just going to be a for loop looking through
+    the associativity tables */
+struct sbpb_ent_t*
+sbpb_search(struct bpred_t *pred, md_addr_t indir_br_addr)
+{
+	if (!indir_br_addr)
+		panic("No address given");
+
+	int i;
+	for (i = 0; i < pred->sbpb.assoc; i++)
+	{
+		if (indir_br_addr == pred->sbpb.sbpb_data[i].addr)
+			return pred->sbpb.sbpb_data + i;
+	}
+
+	return NULL;
+}
+
+/* (Ahead) Return the address of the reference designated by next target */
+struct targ_count_pair*
+sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target)
+{
+	if (!table)
+		panic("SBPB table invalid");
+	if (!next_target)
+		panic("No target address given");
+
+  md_addr_t addr = next_target % pred->sbpb.sets;
+
+	return table->target_pairs + addr;
+}
+
+/* (Ahead) Search the DBPB associativity tables to find a branch that matches */
+struct dbpb_ent_t*
+dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
+{
+	md_addr_t lookup_addr = pred->gbhsr ^ indir_br_addr;
+	lookup_addr = lookup_addr % pred->dbpb.sets;
+
+	struct dbpb_ent_t *entry = pred->dbpb.dbpb_data + lookup_addr;
+	while (entry->prev != NULL)
+	{
+		entry = entry->prev;
+	}
+	while (entry && entry->addr != indir_br_addr)
+	{
+		entry = entry->next;
+	}
+
+	return entry;
+}
 
 /* probe a predictor for a next fetch address, the predictor is probed
    with branch address BADDR, the branch target is BTARGET (used for
    static predictors), and OP is the instruction opcode (used to simulate
    predecode bits; a pointer to the predictor state entry (or null for jumps)
    is returned in *DIR_UPDATE_PTR (used for updating predictor state),
-   and the non-speculative top-of-stack is returned in stack_recover_idx 
+   and the non-speculative top-of-stack is returned in stack_recover_idx
    (used for recovering ret-addr stack after mis-predict).  */
 md_addr_t				/* predicted branch target addr */
 bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
@@ -720,6 +762,44 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
   dir_update_ptr->pmeta = NULL;
   /* Except for jumps, get a pointer to direction-prediction bits */
   switch (pred->class) {
+		case BPredAhead:
+			{
+				md_addr_t *calculated_target = NULL;
+				// if the branch is in SBPB then
+				struct sbpb_ent_t *entry = sbpb_search(pred, baddr);
+				if (entry)
+				{
+					// if target path prediction flag is enable then
+					if (entry->pred_flag)
+					{
+						// get target path history from TPRT;
+						md_addr_t target_path_reg = tprt_lookup(pred, baddr);
+						// predict next target number by TPHT;
+						md_addr_t next_targ_number = tpht_lookup(pred, baddr, target_path_reg);
+						// predict target in SBPB;
+						struct targ_count_pair *prediction = sbpb_lookup(pred, entry, next_targ_number);
+
+						calculated_target = &prediction->address;
+					}
+		 			else
+					{
+						// predict target by maximum likelihood method in SBPB;
+					}
+				}
+				else
+				{
+					struct dbpb_ent_t *entry = dbpb_lookup(pred, baddr);
+					// if the branch is in DBPB then
+					if (entry)
+					{
+						// predict target in DBPB;
+						calculated_target = &entry->target;
+					}
+					// target is already null;
+				}
+			}
+			break;
+
     case BPredComb:
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
 	{
@@ -768,9 +848,6 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	{
 	  return btarget;
 	}
-	case BPredAhead:
-		/* (AHEAD) see if we need to do anything here*/
-		panic("ahead prediction not yet implemented, bpred_lookup");
     default:
       panic("bogus predictor class");
   }
@@ -804,12 +881,12 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
   if (is_call && pred->retstack.size)
     {
       pred->retstack.tos = (pred->retstack.tos + 1)% pred->retstack.size;
-      pred->retstack.stack[pred->retstack.tos].target = 
+      pred->retstack.stack[pred->retstack.tos].target =
 	baddr + sizeof(md_inst_t);
       pred->retstack_pushes++;
     }
 #endif /* !RAS_BUG_COMPATIBLE */
-  
+
   /* (AHEAD) We're gonna need to look at changing basically all of this below here */
 
   /* not a return. Get a pointer into the BTB */
@@ -827,7 +904,7 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	    pbtb = &pred->btb.btb_data[i];
 	    break;
 	  }
-    }	
+    }
   else
     {
       pbtb = &pred->btb.btb_data[index];
@@ -883,9 +960,9 @@ bpred_recover(struct bpred_t *pred,	/* branch predictor instance */
 /* update the branch predictor, only useful for stateful predictors; updates
    entry for instruction type OP at address BADDR.  BTB only gets updated
    for branches which are taken.  Inst was determined to jump to
-   address BTARGET and was taken if TAKEN is non-zero.  Predictor 
-   statistics are updated with result of prediction, indicated by CORRECT and 
-   PRED_TAKEN, predictor state to be updated is indicated by *DIR_UPDATE_PTR 
+   address BTARGET and was taken if TAKEN is non-zero.  Predictor
+   statistics are updated with result of prediction, indicated by CORRECT and
+   PRED_TAKEN, predictor state to be updated is indicated by *DIR_UPDATE_PTR
    (may be NULL for jumps, which shouldn't modify state bits).  Note if
    bpred_update is done speculatively, branch-prediction may get polluted. */
 void
@@ -901,6 +978,32 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   struct bpred_btb_ent_t *pbtb = NULL;
   struct bpred_btb_ent_t *lruhead = NULL, *lruitem = NULL;
   int index, i;
+
+	/*(AHEAD) Put some if in here for ahead branch prediction, and have everything else work on its own (is this needed?)*/
+
+	/*
+	if the branch is in EBTB1 then
+		if the target is not in EBTB1 then
+			add the target to EBTB1;
+		end if
+		update TPHT with target;
+		update TPRT with target;
+		if update the branch too many times then
+			set target path prediction flag disable;
+		end if
+	else
+		if the branch is in EBTB0 then
+			update EBTB0 with target;
+			if update the branch too many times then
+				move the branch and its target to EBTB1;
+				update TPHT and TPRT with target;
+			end if
+		else
+			add the branch and its target to EBTB0;
+		end if
+	end if
+
+	*/
 
   /* don't change bpred state for non-branch instructions or if this
    * is a stateless predictor*/
@@ -938,7 +1041,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
       pred->jr_seen++;
       if (correct)
 	pred->jr_hits++;
-      
+
       if (!dir_update_ptr->dir.ras)
 	{
 	  pred->jr_non_ras_seen++;
@@ -956,9 +1059,9 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   if (pred->class == BPredNotTaken || pred->class == BPredTaken)
     return;
 
-  /* 
+  /*
    * Now we know the branch didn't use the ret-addr stack, and that this
-   * is a stateful predictor 
+   * is a stateful predictor
    */
 
 #ifdef RAS_BUG_COMPATIBLE
@@ -966,7 +1069,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   if (MD_IS_CALL(op) && pred->retstack.size)
     {
       pred->retstack.tos = (pred->retstack.tos + 1)% pred->retstack.size;
-      pred->retstack.stack[pred->retstack.tos].target = 
+      pred->retstack.stack[pred->retstack.tos].target =
 	baddr + sizeof(md_inst_t);
       pred->retstack_pushes++;
     }
@@ -978,7 +1081,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
       (pred->class == BPred2Level || pred->class == BPredComb))
     {
       int l1index, shift_reg;
-      
+
       /* also update appropriate L1 history register */
       l1index =
 	(baddr >> MD_BR_SHIFT) & (pred->dirpred.twolev->config.two.l1size - 1);
@@ -992,11 +1095,11 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   if (taken)
     {
       index = (baddr >> MD_BR_SHIFT) & (pred->btb.sets - 1);
-      
+
       if (pred->btb.assoc > 1)
 	{
 	  index *= pred->btb.assoc;
-	  
+
 	  /* Now we know the set; look for a PC match; also identify
 	   * MRU and LRU items */
 	  for (i = index; i < (index+pred->btb.assoc) ; i++)
@@ -1007,8 +1110,8 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 		  assert(!pbtb);
 		  pbtb = &pred->btb.btb_data[i];
 		}
-	      
-	      dassert(pred->btb.btb_data[i].prev 
+
+	      dassert(pred->btb.btb_data[i].prev
 		      != pred->btb.btb_data[i].next);
 	      if (pred->btb.btb_data[i].prev == NULL)
 		{
@@ -1024,14 +1127,14 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 		}
 	    }
 	  dassert(lruhead && lruitem);
-	  
+
 	  if (!pbtb)
 	    /* missed in BTB; choose the LRU item in this set as the victim */
-	    pbtb = lruitem;	
+	    pbtb = lruitem;
 	  /* else hit, and pbtb points to matching BTB entry */
-	  
+
 	  /* Update LRU state: selected item, whether selected because it
-	   * matched or because it was LRU and selected as a victim, becomes 
+	   * matched or because it was LRU and selected as a victim, becomes
 	   * MRU */
 	  if (pbtb != lruhead)
 	    {
@@ -1052,10 +1155,10 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
       else
 	pbtb = &pred->btb.btb_data[index];
     }
-      
-  /* 
-   * Now 'p' is a possibly null pointer into the direction prediction table, 
-   * and 'pbtb' is a possibly null pointer into the BTB (either to a 
+
+  /*
+   * Now 'p' is a possibly null pointer into the direction prediction table,
+   * and 'pbtb' is a possibly null pointer into the BTB (either to a
    * matched-on entry or a victim which was LRU in its set)
    */
 
