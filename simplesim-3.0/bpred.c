@@ -981,29 +981,48 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 
 	/*(AHEAD) Put some if in here for ahead branch prediction, and have everything else work on its own (is this needed?)*/
 
-	/*
-	if the branch is in EBTB1 then
-		if the target is not in EBTB1 then
-			add the target to EBTB1;
-		end if
-		update TPHT with target;
-		update TPRT with target;
-		if update the branch too many times then
-			set target path prediction flag disable;
-		end if
-	else
-		if the branch is in EBTB0 then
-			update EBTB0 with target;
-			if update the branch too many times then
-				move the branch and its target to EBTB1;
-				update TPHT and TPRT with target;
-			end if
+	if (pred->class == BPredAhead)
+	{
+		// if the branch is in SBPB then
+		struct sbpb_ent_t *sbpb_entry = sbpb_search(pred, baddr);
+		if (sbpb_entry)
+		{
+			// if the target is not in SBPB then
+			if ()
+			{
+				// add the target to SBPB;
+			}
+			// update TPHT with target;
+			// update TPRT with target;
+			// if update the branch too many times then
+			if ()
+			{
+				// set target path prediction flag disable;
+			}
+		}
 		else
-			add the branch and its target to EBTB0;
-		end if
-	end if
+		{
+			// if the branch is in DBPB then
+			struct dbpb_ent_t *dbpb_entry = dbpb_search(pred, baddr);
+			if (dbpb_entry)
+			{
+				// update DBPB with target;
+				// if update the branch too many times then
+				if ()
+				{
+					// move the branch and its target to SBPB;
+					// update TPHT and TPRT with target;
+				}
+			}
+			else
+			{
+				// add the branch and its target to DBPB;
+			}
+		}
+	}
 
-	*/
+	// Update the Global Branch History
+	pred->gbhsr = pred->gbhsr<<1 + taken;
 
   /* don't change bpred state for non-branch instructions or if this
    * is a stateless predictor*/
