@@ -155,6 +155,8 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	{
 	for (i=0; i < (pred->dbpb.assoc*pred->dbpb.sets); i++)
 	  {
+	    pred->dbpb.dbpb_data[i].branch_update_count = 0; 
+
 	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
 	      pred->dbpb.dbpb_data[i].next = &pred->dbpb.dbpb_data[i+1];
 	    else
@@ -173,6 +175,9 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
 	for (i=0; i < pred->sbpb.assoc; i++)
 	{
+		pred->sbpb.sbpb_data[i].branch_update_count = 0;
+		pred->sbpb.sbpb_data[i].pred_flag = 1;
+
 		if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
 			fatal("cannot allocate sbpb target_counter pairs");
 	}
@@ -979,7 +984,12 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   struct bpred_btb_ent_t *lruhead = NULL, *lruitem = NULL;
   int index, i;
 
-	/*(AHEAD) Put some if in here for ahead branch prediction, and have everything else work on its own (is this needed?)*/
+  /* don't change bpred state for non-branch instructions or if this
+   * is a stateless predictor*/
+  if (!(MD_OP_FLAGS(op) & F_CTRL))
+    return;
+
+  /*(AHEAD) Put some if in here for ahead branch prediction, and have everything else work on its own (is this needed?)*/
 
 	if (pred->class == BPredAhead)
 	{
@@ -994,10 +1004,12 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 			}
 			// update TPHT with target;
 			// update TPRT with target;
+			sbpb_entry->branch_update_count ++;
 			// if update the branch too many times then
-			if ()
+			if (sbpb_entry->branch_update_count > BHTP_TOO_MANY)
 			{
 				// set target path prediction flag disable;
+				sbpb_entry->pred_flag = 0;
 			}
 		}
 		else
@@ -1007,8 +1019,9 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 			if (dbpb_entry)
 			{
 				// update DBPB with target;
+				dbpb_entry->branch_update_count ++;
 				// if update the branch too many times then
-				if ()
+				if (dbpb_entry->branch_update_count > BHTP_TOO_MANY)
 				{
 					// move the branch and its target to SBPB;
 					// update TPHT and TPRT with target;
@@ -1024,10 +1037,6 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	// Update the Global Branch History
 	pred->gbhsr = pred->gbhsr<<1 + taken;
 
-  /* don't change bpred state for non-branch instructions or if this
-   * is a stateless predictor*/
-  if (!(MD_OP_FLAGS(op) & F_CTRL))
-    return;
 
   /* Have a branch here */
 

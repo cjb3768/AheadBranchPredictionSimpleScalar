@@ -65,7 +65,8 @@
 #define TPRT_SIZE 1024
 //TPHT
 #define TPHT_SIZE 1024
-
+//BHTP "Too Many Branches"
+#define BHTP_TOO_MANY 64
 
 #include <stdio.h>
 
@@ -177,6 +178,7 @@ struct dbpb_ent_t {
 	md_addr_t addr;		/* address of branch being tracked, also for tag matching*/
   	enum md_opcode op;		/* opcode of branch corresp. to addr */
   	md_addr_t target;		/* last destination of branch when taken */
+	unsigned int branch_update_count; /* counter for determining "too many" branch updates, signalling need to push to sbpb */
   	struct dbpb_ent_t *prev, *next; /* lru chaining pointers */
 };
 
@@ -202,6 +204,7 @@ struct sbpb_ent_t {
 	md_addr_t addr;			/* address of branch being tracked, also for tag matching*/
   	enum md_opcode op;		/* opcode of branch corresp. to addr */
 	unsigned int pred_flag;		/* flag for prediction mode */
+	unsigned int branch_update_count; /* counter for determining "too many" branch updates */
 	struct targ_count_pair *target_pairs; /* data entries in table*/
 };
 
