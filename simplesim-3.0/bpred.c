@@ -711,6 +711,38 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 	return table->target_pairs + addr;
 }
 
+/* (Ahead) Write/Overwrite a new value in table's targ_pair list */
+void
+sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address)
+{
+	if (!table)
+		panic("SBPB table invalid");
+	if (!next_target)
+		panic("No target address given");
+
+  	md_addr_t index = next_target % pred->sbpb.sets;
+	
+	table->target_pairs[index].frequency = 1;
+	table->target_pairs[index].address = new_address;
+}
+
+/* (Ahead) Return whether or not a target address is in the given sbpb entry */
+struct targ_count_pair* 
+search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target){
+
+	if (!table)
+		panic("SBPB table invalid");
+	if (!search_target)
+		panic("No target address given");
+	
+	int i;
+	for (i = 0; i < pred->sbpb.sets; i++){
+		if (table->target_pairs[i].address == search_target)
+			return table->target_pairs + i;
+	}
+	return NULL;
+}
+
 /* (Ahead) Search the DBPB associativity tables to find a branch that matches */
 struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
@@ -997,10 +1029,18 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 		struct sbpb_ent_t *sbpb_entry = sbpb_search(pred, baddr);
 		if (sbpb_entry)
 		{
+			// find target pair in SBPB;
+			struct targ_count_pair *targ_pair = search_sbpb_pairs(pred, sbpb_entry, btarget);
+
 			// if the target is not in SBPB then
-			if ()
+			if (!targ_pair)
 			{
+				// get target path history from TPRT;
+				md_addr_t target_path_reg = tprt_lookup(pred, baddr);
+				// lookup next target number from TPHT;
+				md_addr_t next_targ_number = tpht_lookup(pred, baddr, target_path_reg);
 				// add the target to SBPB;
+				sbpb_write(pred, sbpb_entry, next_targ_number, btarget);
 			}
 			// update TPHT with target;
 			// update TPRT with target;
@@ -1015,7 +1055,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 		else
 		{
 			// if the branch is in DBPB then
-			struct dbpb_ent_t *dbpb_entry = dbpb_search(pred, baddr);
+			struct dbpb_ent_t *dbpb_entry = dbpb_lookup(pred, baddr);
 			if (dbpb_entry)
 			{
 				// update DBPB with target;
@@ -1035,7 +1075,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 	}
 
 	// Update the Global Branch History
-	pred->gbhsr = pred->gbhsr<<1 + taken;
+	pred->gbhsr = (pred->gbhsr << 1) + taken;
 
 
   /* Have a branch here */
