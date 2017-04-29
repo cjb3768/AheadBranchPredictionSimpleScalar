@@ -2,20 +2,20 @@
 
 /* SimpleScalar(TM) Tool Suite
  * Copyright (C) 1994-2003 by Todd M. Austin, Ph.D. and SimpleScalar, LLC.
- * All Rights Reserved. 
- * 
+ * All Rights Reserved.
+ *
  * THIS IS A LEGAL DOCUMENT, BY USING SIMPLESCALAR,
  * YOU ARE AGREEING TO THESE TERMS AND CONDITIONS.
- * 
+ *
  * No portion of this work may be used by any commercial entity, or for any
  * commercial purpose, without the prior, written permission of SimpleScalar,
  * LLC (info@simplescalar.com). Nonprofit and noncommercial use is permitted
  * as described below.
- * 
+ *
  * 1. SimpleScalar is provided AS IS, with no warranty of any kind, express
  * or implied. The user of the program accepts full responsibility for the
  * application of the program and the use of any results.
- * 
+ *
  * 2. Nonprofit and noncommercial use is encouraged. SimpleScalar may be
  * downloaded, compiled, executed, copied, and modified solely for nonprofit,
  * educational, noncommercial research, and noncommercial scholarship
@@ -24,13 +24,13 @@
  * solely for nonprofit, educational, noncommercial research, and
  * noncommercial scholarship purposes provided that this notice in its
  * entirety accompanies all copies.
- * 
+ *
  * 3. ALL COMMERCIAL USE, AND ALL USE BY FOR PROFIT ENTITIES, IS EXPRESSLY
  * PROHIBITED WITHOUT A LICENSE FROM SIMPLESCALAR, LLC (info@simplescalar.com).
- * 
+ *
  * 4. No nonprofit user may place any restrictions on the use of this software,
  * including as modified by the user, by any other authorized user.
- * 
+ *
  * 5. Noncommercial and nonprofit users may distribute copies of SimpleScalar
  * in compiled or executable form as set forth in Section 2, provided that
  * either: (A) it is accompanied by the corresponding machine-readable source
@@ -40,11 +40,11 @@
  * must permit verbatim duplication by anyone, or (C) it is distributed by
  * someone who received only the executable form, and is accompanied by a
  * copy of the written offer of source code.
- * 
+ *
  * 6. SimpleScalar was developed by Todd M. Austin, Ph.D. The tool suite is
  * currently maintained by SimpleScalar LLC (info@simplescalar.com). US Mail:
  * 2395 Timbercrest Court, Ann Arbor, MI 48105.
- * 
+ *
  * Copyright (C) 1994-2003 by Todd M. Austin, Ph.D. and SimpleScalar, LLC.
  */
 
@@ -121,7 +121,7 @@ static counter_t sim_num_branches = 0;
 void
 sim_reg_options(struct opt_odb_t *odb)
 {
-  opt_reg_header(odb, 
+  opt_reg_header(odb,
 "sim-bpred: This simulator implements a branch predictor analyzer.\n"
 		 );
 
@@ -284,7 +284,7 @@ sim_check_options(struct opt_odb_t *odb, int argc, char **argv)
 			  /* btb assoc */btb_config[1],
 			  /* ret-addr stack size */ras_size);
     }
-    }
+    
   else
     fatal("cannot parse predictor type `%s'", pred_type);
 }
@@ -476,6 +476,9 @@ sim_main(void)
   int stack_idx;
   enum md_fault_type fault;
 
+  /* (AHEAD) counter for cycles to determine if our simulated backend would have finished in time */
+  unsigned int cycles_since_start = 0;
+
   fprintf(stderr, "sim: ** starting functional simulation w/ predictors **\n");
 
   /* set up initial default next PC */
@@ -486,12 +489,6 @@ sim_main(void)
     dlite_main(regs.regs_PC - sizeof(md_inst_t), regs.regs_PC,
 	       sim_num_insn, &regs, mem);
 
-  /* (AHEAD) Prefetch a number of instructions here to offset ahead prediction */
-  /* Use MD_FETCH_INST and MD_SET_OPCODE */
-  if (pred && pred->class == BPredAhead) {
-	  //do early prediction
-  }
-  
   //run simulation
   while (TRUE)
     {
@@ -503,9 +500,9 @@ sim_main(void)
 
       /* get the next instruction to execute */
       MD_FETCH_INST(inst, mem, regs.regs_PC); //This is literally pulling the next instruction into memory and storing it as "inst"
-	  
+
 	  //(AHEAD) Find file where MD_FETCH_INST is defined, so we can at the same time hit the small table
-	  //Add an if for it 
+	  //Add an if for it
 
       /* keep an instruction count */
       sim_num_insn++;
@@ -520,8 +517,6 @@ sim_main(void)
       MD_SET_OPCODE(op, inst);
 
       /* execute the instruction */
-	  /*(AHEAD) Read through the rest and figure out where writeback takes place 
-	  so you can inject in PE, with LTR, LBR, and EBTB */
       switch (op)
 	{
 #define DEFINST(OP,MSK,NAME,OPFORM,RES,FLAGS,O1,O2,I1,I2,I3)		\
@@ -604,5 +599,7 @@ sim_main(void)
       /* finish early? */
       if (max_insts && sim_num_insn >= max_insts)
 	return;
+
+      cycles_since_start++;
     }
 }
