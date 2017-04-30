@@ -787,7 +787,7 @@ dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 
 /* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
 void 
-dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t )
+dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 {
 	//find appropriate dbpb index where we might write a result
 	md_addr_t lookup_addr = pred->gbhsr ^ indir_br_addr;

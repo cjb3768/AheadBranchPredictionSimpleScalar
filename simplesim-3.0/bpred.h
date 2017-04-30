@@ -332,10 +332,18 @@ void bpred_after_priming(struct bpred_t *bpred);
 md_addr_t
 tprt_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
 
+/* (Ahead) Subroutine to update a tprt entry given a new target */
+void
+tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr);
+
 /* (Ahead) Subroutine to help XOR an address and register and lookup
    the result in a table */
 md_addr_t
 tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target);
+
+/* (Ahead) update a given TPHT entry with a new target value */
+void
+tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t new_targ_number);
 
 /* (Ahead) Bit of a hack, just going to be a for loop looking through
     the associativity tables */
@@ -349,6 +357,10 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 /* (Ahead) Search the DBPB associativity tables to find a branch that matches */
 struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
+
+/* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
+void 
+dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target);
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
 void

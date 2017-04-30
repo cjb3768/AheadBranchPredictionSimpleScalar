@@ -162,7 +162,7 @@ struct tprt_ent_t {
 /* (AHEAD) Create struct for TPHT entries */
 struct tpht_ent_t{
 	//needs to hold xor code from tprt and a next target number
-   md_addr_t tph_xor_code;
+   //md_addr_t tph_xor_code;
    md_addr_t next_targ_number;
 };
 
@@ -349,6 +349,10 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 /* (Ahead) Search the DBPB associativity tables to find a branch that matches */
 struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
+
+/* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
+void 
+dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
 void
