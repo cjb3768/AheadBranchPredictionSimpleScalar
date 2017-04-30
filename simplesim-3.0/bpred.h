@@ -176,13 +176,10 @@ struct btb_t{
 /* (AHEAD) Create struct for DBPB entries */
 struct dbpb_ent_t {
 	md_addr_t addr;		/* address of branch being tracked, also for tag matching*/
-  	enum md_opcode op;		/* opcode of branch corresp. to addr */
-  	md_addr_t target;		/* last destination of branch when taken */
+  md_addr_t target;		/* last destination of branch when taken */
 	unsigned int branch_update_count; /* counter for determining "too many" branch updates, signalling need to push to sbpb */
-  	struct dbpb_ent_t *prev, *next; /* lru chaining pointers */
+  unsigned int plru; /* lru chaining pointers */
 };
-
-
 
 /* (AHEAD) Create struct for Dynamic Branch Predictor Buffer */
 struct dbpb_t {
@@ -202,7 +199,7 @@ struct targ_count_pair{
 /* (AHEAD) Create struct for SBPT entries */
 struct sbpb_ent_t {
 	md_addr_t addr;			/* address of branch being tracked, also for tag matching*/
-  	enum md_opcode op;		/* opcode of branch corresp. to addr */
+  enum md_opcode op;		/* opcode of branch corresp. to addr */
 	unsigned int pred_flag;		/* flag for prediction mode */
 	unsigned int branch_update_count; /* counter for determining "too many" branch updates */
 	struct targ_count_pair *target_pairs; /* data entries in table*/
@@ -359,7 +356,7 @@ struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
 
 /* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
-void 
+void
 dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target);
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
@@ -367,7 +364,7 @@ void
 sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address);
 
 /* (Ahead) Return whether or not a target address is in the given sbpb entry */
-struct targ_count_pair* 
+struct targ_count_pair*
 search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target);
 
 /* probe a predictor for a next fetch address, the predictor is probed

@@ -133,7 +133,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
 	if (pred->pred_table.assoc > 1)
 	{
-	for (i=0; i < (pred->pred_table.assoc*pred->pred_table.sets); i++)
+		for (i=0; i < (pred->pred_table.assoc*pred->pred_table.sets); i++)
 	  {
 	    if (i % pred->pred_table.assoc != pred->pred_table.assoc - 1)
 	      pred->pred_table.btb_data[i].next = &pred->pred_table.btb_data[i+1];
@@ -146,25 +146,20 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	}
 
 	//dbpb
-	if (!(pred->dbpb.dbpb_data = calloc(DBPB_SETS * DBPB_ASSOC, sizeof(struct dbpb_ent_t))))
+	if (!(pred->dbpb.dbpb_data = calloc(DBPB_ASSOC * DBPB_SETS, sizeof(struct dbpb_ent_t*))))
 		fatal("cannot allocate dbpb");
 	pred->dbpb.sets = DBPB_SETS;
 	pred->dbpb.assoc = DBPB_ASSOC;
 
-	if (pred->dbpb.assoc > 1)
+	// initialize the plru values
+	for (i = 0; i < pred->dbpb.assoc * pred->dbpb.sets; i += pred->dbpb.assoc)
 	{
-	for (i=0; i < (pred->dbpb.assoc*pred->dbpb.sets); i++)
-	  {
-	    pred->dbpb.dbpb_data[i].branch_update_count = 0; 
-
-	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
-	      pred->dbpb.dbpb_data[i].next = &pred->dbpb.dbpb_data[i+1];
-	    else
-	      pred->dbpb.dbpb_data[i].next = NULL;
-
-	    if (i % pred->dbpb.assoc != pred->dbpb.assoc - 1)
-	      pred->dbpb.dbpb_data[i+1].prev = &pred->dbpb.dbpb_data[i];
-	  }
+		int j;
+		for (j = 0; j < pred->dbpb.assoc; j++)
+		{
+			pred->dbpb.dbpb_data[i+j].addr = 0; //effectively nullptr
+			pred->dbpb.dbpb_data[i+j].plru = j;
+		}
 	}
 
 	//sbpb
@@ -742,20 +737,20 @@ sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target
 		panic("No target address given");
 
   	md_addr_t index = next_target % pred->sbpb.sets;
-	
+
 	table->target_pairs[index].frequency = 1;
 	table->target_pairs[index].address = new_address;
 }
 
 /* (Ahead) Return whether or not a target address is in the given sbpb entry */
-struct targ_count_pair* 
+struct targ_count_pair*
 search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target){
 
 	if (!table)
 		panic("SBPB table invalid");
 	if (!search_target)
 		panic("No target address given");
-	
+
 	int i;
 	for (i = 0; i < pred->sbpb.sets; i++){
 		if (table->target_pairs[i].address == search_target)
@@ -768,33 +763,55 @@ search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t sear
 struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 {
-	md_addr_t lookup_addr = pred->gbhsr ^ indir_br_addr;
-	lookup_addr = lookup_addr % pred->dbpb.sets;
+	// get the address of the block of associated entries
+	md_addr_t block_addr = ((pred->gbhsr ^ indir_br_addr) % pred->dbpb.sets) * pred->dbpb.assoc;
 
-	struct dbpb_ent_t *entry = pred->dbpb.dbpb_data + lookup_addr;
-	//is this next bit correct? I think next and previous work within a set, not across associativity
-	while (entry->prev != NULL)
+	// look for matching entry
+	unsigned int j = 0;
+	while (j < pred->dbpb.assoc && pred->dbpb.dbpb_data[block_addr + j].addr != indir_br_addr)
 	{
-		entry = entry->prev;
-	}
-	while (entry && entry->addr != indir_br_addr)
-	{
-		entry = entry->next;
+		j++;
 	}
 
-	return entry;
+	// We're out of bounds and didn't find a match
+	if (j >= pred->dbpb.assoc)
+		return NULL;
+
+	unsigned int index = block_addr + j;
+
+	// if not already the most recently used, update the PLRU info
+	if (pred->dbpb.dbpb_data[index].plru < pred->dbpb.assoc - 1)
+	{
+		for (j=0; j<pred->dbpb.assoc; j++)
+		{
+			if (pred->dbpb.dbpb_data[block_addr + j].plru == pred->dbpb.dbpb_data[index].plru + 1)
+				pred->dbpb.dbpb_data[block_addr + j].plru--;
+		}
+		pred->dbpb.dbpb_data[index].plru++;
+	}
+
+	return pred->dbpb.dbpb_data + index;
 }
 
 /* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
-void 
+void
 dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 {
 	//find appropriate dbpb index where we might write a result
-	md_addr_t lookup_addr = pred->gbhsr ^ indir_br_addr;
-	lookup_addr = lookup_addr % pred->dbpb.sets;
+	md_addr_t block_addr = ((pred->gbhsr ^ indir_br_addr) % pred->dbpb.sets) * pred->dbpb.assoc;
 
-	//check associativity tables for a free slot
-	//if no such slot exists, overwrite the first and realign other entry values
+	unsigned int j, index;
+	for (j=0; j<pred->dbpb.assoc; j++)
+	{
+		if (pred->dbpb.dbpb_data[block_addr + j].plru == 0)
+			index = block_addr + j;
+		else
+			pred->dbpb.dbpb_data[block_addr + j].plru--;
+	}
+
+	pred->dbpb.dbpb_data[index].addr = indir_br_addr;
+	pred->dbpb.dbpb_data[index].target = new_target;
+	pred->dbpb.dbpb_data[index].plru = pred->dbpb.assoc-1;
 }
 
 /* probe a predictor for a next fetch address, the predictor is probed
