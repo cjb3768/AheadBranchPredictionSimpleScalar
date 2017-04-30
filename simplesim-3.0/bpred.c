@@ -661,8 +661,16 @@ tprt_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 
 /* (Ahead) Subroutine to update a tprt entry given a new target */
 void
-tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr)
+tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 {
+	if (!indir_br_addr)
+		panic("No address given");
+
+	md_addr_t lookup_addr = indir_br_addr % pred->tprt.size;
+
+	struct tprt_ent_t *entry = pred->tprt.tprt_data + lookup_addr;
+
+	entry->target = new_target;
 
 }
 
@@ -729,7 +737,7 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
 void
-sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address)
+sbpb_write_target(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address)
 {
 	if (!table)
 		panic("SBPB table invalid");
@@ -812,6 +820,14 @@ dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 	pred->dbpb.dbpb_data[index].addr = indir_br_addr;
 	pred->dbpb.dbpb_data[index].target = new_target;
 	pred->dbpb.dbpb_data[index].plru = pred->dbpb.assoc-1;
+}
+
+/* (Ahead) Migrate branch value from dbpb to sbpb */
+void
+dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, struct dbpb_ent_t *dbpb_entry){
+	//replace lowest value in sbpb
+	//set update counter to 1
+	//add target to pairs
 }
 
 /* probe a predictor for a next fetch address, the predictor is probed
@@ -1076,8 +1092,15 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 
 	if (pred->class == BPredAhead)
 	{
+		// get target path history from TPRT;
+		md_addr_t target_path_reg = tprt_lookup(pred, baddr);
+
+		// lookup next target number from TPHT;
+		md_addr_t next_targ_number = tpht_lookup(pred, baddr, target_path_reg);
+
 		// if the branch is in SBPB then
 		struct sbpb_ent_t *sbpb_entry = sbpb_search(pred, baddr);
+
 		if (sbpb_entry)
 		{
 			// find target pair in SBPB;
@@ -1086,17 +1109,14 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 			// if the target is not in SBPB then
 			if (!targ_pair)
 			{
-				// get target path history from TPRT;
-				md_addr_t target_path_reg = tprt_lookup(pred, baddr);
-
-				// lookup next target number from TPHT;
-				md_addr_t next_targ_number = tpht_lookup(pred, baddr, target_path_reg);
-
 				// add the target to SBPB;
-				sbpb_write(pred, sbpb_entry, next_targ_number, btarget);
+				sbpb_write_target(pred, sbpb_entry, next_targ_number, btarget);
 			}
 			// update TPHT with target;
+			tpht_write(pred, baddr, target_path_reg, btarget);
 			// update TPRT with target;
+			tprt_write(pred, baddr, btarget);
+
 			sbpb_entry->branch_update_count ++;
 			// if update the branch too many times then
 			if (sbpb_entry->branch_update_count > BHTP_TOO_MANY)
@@ -1118,11 +1138,14 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 				{
 					// move the branch and its target to SBPB;
 					// update TPHT and TPRT with target;
+					tpht_write(pred, baddr, target_path_reg, btarget);
+					tprt_write(pred, baddr, btarget);
 				}
 			}
 			else
 			{
 				// add the branch and its target to DBPB;
+				dbpb_write(pred, baddr, btarget);
 			}
 		}
 	}

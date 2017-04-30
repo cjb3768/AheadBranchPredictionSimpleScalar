@@ -199,9 +199,9 @@ struct targ_count_pair{
 /* (AHEAD) Create struct for SBPT entries */
 struct sbpb_ent_t {
 	md_addr_t addr;			/* address of branch being tracked, also for tag matching*/
-  enum md_opcode op;		/* opcode of branch corresp. to addr */
 	unsigned int pred_flag;		/* flag for prediction mode */
 	unsigned int branch_update_count; /* counter for determining "too many" branch updates */
+	unsigned int plru;
 	struct targ_count_pair *target_pairs; /* data entries in table*/
 };
 
@@ -331,7 +331,7 @@ tprt_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
 
 /* (Ahead) Subroutine to update a tprt entry given a new target */
 void
-tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr);
+tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target);
 
 /* (Ahead) Subroutine to help XOR an address and register and lookup
    the result in a table */
@@ -361,7 +361,11 @@ dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target);
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
 void
-sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address);
+sbpb_write_target(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address);
+
+/* (Ahead) Migrate branch value from dbpb to sbpb */
+void
+dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, struct dbpb_ent_t *dbpb_entry);
 
 /* (Ahead) Return whether or not a target address is in the given sbpb entry */
 struct targ_count_pair*
