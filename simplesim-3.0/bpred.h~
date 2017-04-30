@@ -350,6 +350,14 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 struct dbpb_ent_t*
 dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr);
 
+/* (Ahead) Write/Overwrite a new value in table's targ_pair list */
+void
+sbpb_write(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_target, md_addr_t new_address);
+
+/* (Ahead) Return whether or not a target address is in the given sbpb entry */
+struct targ_count_pair* 
+search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target);
+
 /* probe a predictor for a next fetch address, the predictor is probed
    with branch address BADDR, the branch target is BTARGET (used for
    static predictors), and OP is the instruction opcode (used to simulate

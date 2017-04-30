@@ -162,7 +162,7 @@ struct tprt_ent_t {
 /* (AHEAD) Create struct for TPHT entries */
 struct tpht_ent_t{
 	//needs to hold xor code from tprt and a next target number
-   md_addr_t tph_xor_code;
+   //md_addr_t tph_xor_code;
    md_addr_t next_targ_number;
 };
 

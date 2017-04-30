@@ -664,6 +664,13 @@ tprt_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 	return entry->target;
 }
 
+/* (Ahead) Subroutine to update a tprt entry given a new target */
+void
+tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr)
+{
+
+}
+
 /* (Ahead) Subroutine to help XOR an address and register and lookup
    the result in a table */
 md_addr_t
@@ -678,6 +685,20 @@ tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target)
 
 	return entry->next_targ_number;
 }
+
+/* (Ahead) update a given TPHT entry with a new target value */
+void
+tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t new_targ_number){
+	if (!indir_br_addr || !target || !new_targ_number)
+		panic("No address given");
+
+	md_addr_t lookup_addr = (target ^ indir_br_addr) % pred->tpht.size;
+
+	struct tpht_ent_t *entry = pred->tpht.tpht_data + lookup_addr;
+
+	entry->next_targ_number = new_targ_number;
+}
+
 
 /* (Ahead) Bit of a hack, just going to be a for loop looking through
     the associativity tables */
@@ -751,6 +772,7 @@ dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 	lookup_addr = lookup_addr % pred->dbpb.sets;
 
 	struct dbpb_ent_t *entry = pred->dbpb.dbpb_data + lookup_addr;
+	//is this next bit correct? I think next and previous work within a set, not across associativity
 	while (entry->prev != NULL)
 	{
 		entry = entry->prev;
@@ -761,6 +783,18 @@ dbpb_lookup(struct bpred_t *pred, md_addr_t indir_br_addr)
 	}
 
 	return entry;
+}
+
+/* (Ahead) Write/Overwrite an entry in the DBPB associativity table */
+void 
+dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t )
+{
+	//find appropriate dbpb index where we might write a result
+	md_addr_t lookup_addr = pred->gbhsr ^ indir_br_addr;
+	lookup_addr = lookup_addr % pred->dbpb.sets;
+
+	//check associativity tables for a free slot
+	//if no such slot exists, overwrite the first and realign other entry values
 }
 
 /* probe a predictor for a next fetch address, the predictor is probed
@@ -1037,8 +1071,10 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 			{
 				// get target path history from TPRT;
 				md_addr_t target_path_reg = tprt_lookup(pred, baddr);
+
 				// lookup next target number from TPHT;
 				md_addr_t next_targ_number = tpht_lookup(pred, baddr, target_path_reg);
+
 				// add the target to SBPB;
 				sbpb_write(pred, sbpb_entry, next_targ_number, btarget);
 			}
