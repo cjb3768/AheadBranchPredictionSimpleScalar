@@ -172,6 +172,14 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	{
 		pred->sbpb.sbpb_data[i].branch_update_count = 0;
 		pred->sbpb.sbpb_data[i].pred_flag = 1;
+		pred->sbpb.sbpb_data[i].plru = i;
+
+		int j;
+		for (j=0; j<pred->sbpb.sets; j++)
+		{
+			pred->sbpb.sbpb_data[i].target_pairs[j].address = 0; // nullptr
+			pred->sbpb.sbpb_data[i].target_pairs[j].pmru = j;
+		}
 
 		if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
 			fatal("cannot allocate sbpb target_counter pairs");
@@ -691,7 +699,8 @@ tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target)
 
 /* (Ahead) update a given TPHT entry with a new target value */
 void
-tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t new_targ_number){
+tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t new_targ_number)
+{
 	if (!indir_br_addr || !target || !new_targ_number)
 		panic("No address given");
 
@@ -702,23 +711,36 @@ tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_a
 	entry->next_targ_number = new_targ_number;
 }
 
-
-/* (Ahead) Bit of a hack, just going to be a for loop looking through
-    the associativity tables */
+/* (Ahead) Search through the associativity tables */
 struct sbpb_ent_t*
 sbpb_search(struct bpred_t *pred, md_addr_t indir_br_addr)
 {
 	if (!indir_br_addr)
 		panic("No address given");
 
-	int i;
-	for (i = 0; i < pred->sbpb.assoc; i++)
+	unsigned int index = 0;
+	while (index < pred->sbpb.assoc && pred->sbpb.sbpb_data[index].addr != indir_br_addr)
 	{
-		if (indir_br_addr == pred->sbpb.sbpb_data[i].addr)
-			return pred->sbpb.sbpb_data + i;
+		index++;
 	}
 
-	return NULL;
+	// We're out of bounds and didn't find a match
+	if (index >= pred->sbpb.assoc)
+		return NULL;
+
+	// if not already the most recently used, update the PLRU info
+	if (pred->sbpb.sbpb_data[index].plru < pred->dbpb.assoc - 1)
+	{
+		unsigned int j;
+		for (j=0; j<pred->sbpb.assoc; j++)
+		{
+			if (pred->sbpb.sbpb_data[j].plru == pred->sbpb.sbpb_data[index].plru + 1)
+				pred->sbpb.sbpb_data[j].plru--;
+		}
+		pred->sbpb.sbpb_data[index].plru++;
+	}
+
+	return pred->sbpb.sbpb_data + index;
 }
 
 /* (Ahead) Return the address of the reference designated by next target */
@@ -730,9 +752,21 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 	if (!next_target)
 		panic("No target address given");
 
-  md_addr_t addr = next_target % pred->sbpb.sets;
+  md_addr_t index = next_target % pred->sbpb.sets;
+	unsigned int i, old_mru = table->target_pairs[index].pmru;
 
-	return table->target_pairs + addr;
+	if (old_mru == pred->sbpb.sets - 1)
+	{
+		for (i=0; i<pred->sbpb.sets; i++)
+		{
+			if (table->target_pairs[i].pmru == old_mru + 1)
+				table->target_pairs[i].pmru--;
+		}
+
+		table->target_pairs[index].pmru++;
+	}
+
+	return table->target_pairs + index;
 }
 
 /* (Ahead) Write/Overwrite a new value in table's targ_pair list */
@@ -744,16 +778,23 @@ sbpb_write_target(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next
 	if (!next_target)
 		panic("No target address given");
 
-  	md_addr_t index = next_target % pred->sbpb.sets;
+  md_addr_t index = next_target % pred->sbpb.sets;
+	unsigned int i, old_mru = table->target_pairs[index].pmru;
 
-	table->target_pairs[index].frequency = 1;
+	for (i=0; i<pred->sbpb.sets; i++)
+	{
+		if (table->target_pairs[i].pmru < old_mru)
+			table->target_pairs[i].pmru++;
+	}
+
+	table->target_pairs[index].pmru = 0;
 	table->target_pairs[index].address = new_address;
 }
 
 /* (Ahead) Return whether or not a target address is in the given sbpb entry */
 struct targ_count_pair*
-search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target){
-
+search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target)
+{
 	if (!table)
 		panic("SBPB table invalid");
 	if (!search_target)
@@ -824,10 +865,64 @@ dbpb_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 
 /* (Ahead) Migrate branch value from dbpb to sbpb */
 void
-dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, struct dbpb_ent_t *dbpb_entry){
-	//replace lowest value in sbpb
-	//set update counter to 1
-	//add target to pairs
+dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t next_target)
+{
+	unsigned int i = next_target % pred->sbpb.sets;
+	struct sbpb_ent_t *blk;
+
+	unsigned int j;
+	for (j=0; j<pred->sbpb.assoc; j++)
+	{
+		if (pred->sbpb.sbpb_data[j].plru == 0)
+			blk = pred->sbpb.sbpb_data + i;
+		else
+			pred->sbpb.sbpb_data[j].plru--;
+	}
+
+	// blk is now the least recently used entry
+	blk->addr = indir_br_addr;
+	blk->pred_flag = 1;
+	blk->branch_update_count = 1;
+	blk->plru = pred->sbpb.assoc - 1;
+
+	// take care of the target pair entries
+	for (j=0; j<i; j++)
+	{
+		blk->target_pairs[j].pmru = j;
+		blk->target_pairs[j].address = 0;
+	}
+
+	blk->target_pairs[i].pmru = pred->sbpb.sets-1;
+	blk->target_pairs[i].address = target;
+
+	for (j=i+1; j<pred->sbpb.sets; j++)
+	{
+		blk->target_pairs[j].pmru = j-1;
+		blk->target_pairs[j].address = 0;
+	}
+}
+
+/* (Ahead) Maximum Likelihood function as we can best tell from the paper.
+   Chooses from the list of options, the option that is both most recently
+	 used and frequently used, using an aging scheme. */
+md_addr_t
+maximum_likelihood(struct bpred_t *pred, struct sbpb_ent_t *entry)
+{
+	struct targ_count_pair* candidate = entry->target_pairs;
+
+	unsigned int i;
+	for (i=1; i<pred->sbpb.sets; i++)
+	{
+		if (entry->target_pairs[i].address)
+		{
+			if (entry->target_pairs[i].pmru > candidate->pmru || candidate->address == 0)
+			{
+				candidate = entry->target_pairs + i;
+			}
+		}
+	}
+
+	return candidate->address;
 }
 
 /* probe a predictor for a next fetch address, the predictor is probed
@@ -865,10 +960,11 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
   dir_update_ptr->pdir2 = NULL;
   dir_update_ptr->pmeta = NULL;
   /* Except for jumps, get a pointer to direction-prediction bits */
+
+	md_addr_t calculated_target = 0;
   switch (pred->class) {
 		case BPredAhead:
 			{
-				md_addr_t *calculated_target = NULL;
 				// if the branch is in SBPB then
 				struct sbpb_ent_t *entry = sbpb_search(pred, baddr);
 				if (entry)
@@ -883,11 +979,12 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 						// predict target in SBPB;
 						struct targ_count_pair *prediction = sbpb_lookup(pred, entry, next_targ_number);
 
-						calculated_target = &prediction->address;
+						calculated_target = prediction->address;
 					}
 		 			else
 					{
 						// predict target by maximum likelihood method in SBPB;
+						calculated_target = maximum_likelihood(pred, entry);
 					}
 				}
 				else
@@ -897,7 +994,7 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 					if (entry)
 					{
 						// predict target in DBPB;
-						calculated_target = &entry->target;
+						calculated_target = entry->target;
 					}
 					// target is already null;
 				}
@@ -1016,6 +1113,11 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
 	pbtb = NULL;
     }
 
+
+	if (pred->class == BPredAhead)
+	{
+		return calculated_target;
+	}
   /*
    * We now also have a pointer into the BTB for a hit, or NULL otherwise
    */
@@ -1132,11 +1234,16 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
 			if (dbpb_entry)
 			{
 				// update DBPB with target;
-				dbpb_entry->branch_update_count ++;
+				if (dbpb_entry->target != btarget)
+				{
+					dbpb_entry->target = btarget;
+					dbpb_entry->branch_update_count++;
+				}
 				// if update the branch too many times then
 				if (dbpb_entry->branch_update_count > BHTP_TOO_MANY)
 				{
 					// move the branch and its target to SBPB;
+					dbpb_migrate(pred, baddr, btarget, next_targ_number);
 					// update TPHT and TPRT with target;
 					tpht_write(pred, baddr, target_path_reg, btarget);
 					tprt_write(pred, baddr, btarget);

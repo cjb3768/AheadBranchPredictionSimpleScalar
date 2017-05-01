@@ -192,7 +192,7 @@ struct dbpb_t {
    The aging mechanism woe implement is simpla and works by incrementing target
    hits by ASSOC-1 and decrementing all others by one*/
 struct targ_count_pair{
-	unsigned int frequency;
+	unsigned int pmru; // for finding the most recently used
 	md_addr_t address;
 };
 
@@ -365,11 +365,17 @@ sbpb_write_target(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next
 
 /* (Ahead) Migrate branch value from dbpb to sbpb */
 void
-dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, struct dbpb_ent_t *dbpb_entry);
+dbpb_migrate(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t next_target);
 
 /* (Ahead) Return whether or not a target address is in the given sbpb entry */
 struct targ_count_pair*
 search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t search_target);
+
+/* (Ahead) Maximum Likelihood function as we can best tell from the paper.
+   Chooses from the list of options, the option that is both most recently
+	 used and frequently used, using an aging scheme. */
+md_addr_t
+maximum_likelihood(struct bpred_t *pred, struct sbpb_ent_t *entry);
 
 /* probe a predictor for a next fetch address, the predictor is probed
    with branch address BADDR, the branch target is BTARGET (used for
