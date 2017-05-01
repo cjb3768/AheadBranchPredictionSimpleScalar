@@ -155,7 +155,7 @@ struct tprt_ent_t {
 	//needs indirect branch address, and target path reg
 
   md_addr_t addr;		/* address of branch being tracked */
-  enum md_opcode op;		/* opcode of branch corresp. to addr */
+  //enum md_opcode op;		/* opcode of branch corresp. to addr */
   md_addr_t target;		/* last destination of branch when taken */
 };
 

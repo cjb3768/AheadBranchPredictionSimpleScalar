@@ -146,7 +146,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	}
 
 	//dbpb
-	if (!(pred->dbpb.dbpb_data = calloc(DBPB_ASSOC * DBPB_SETS, sizeof(struct dbpb_ent_t*))))
+	if (!(pred->dbpb.dbpb_data = calloc(DBPB_ASSOC * DBPB_SETS, sizeof(struct dbpb_ent_t))))
 		fatal("cannot allocate dbpb");
 	pred->dbpb.sets = DBPB_SETS;
 	pred->dbpb.assoc = DBPB_ASSOC;
@@ -165,6 +165,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 	//sbpb
 	if (!(pred->sbpb.sbpb_data = calloc(SBPB_ASSOC, sizeof(struct sbpb_ent_t))))
 		fatal("cannot allocate sbpb");
+
 	pred->sbpb.sets = SBPB_SETS;
 	pred->sbpb.assoc = SBPB_ASSOC;
 
@@ -174,26 +175,38 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 		pred->sbpb.sbpb_data[i].pred_flag = 1;
 		pred->sbpb.sbpb_data[i].plru = i;
 
-		int j;
-		for (j=0; j<pred->sbpb.sets; j++)
-		{
-			pred->sbpb.sbpb_data[i].target_pairs[j].address = 0; // nullptr
-			pred->sbpb.sbpb_data[i].target_pairs[j].pmru = j;
-		}
-
 		if (!(pred->sbpb.sbpb_data[i].target_pairs = calloc(SBPB_ASSOC, sizeof(struct targ_count_pair))))
 			fatal("cannot allocate sbpb target_counter pairs");
+
+		int k;
+		for (k=0; k<pred->sbpb.sets; k++)
+		{
+			pred->sbpb.sbpb_data[i].target_pairs[k].address = 0; // nullptr
+			pred->sbpb.sbpb_data[i].target_pairs[k].pmru = k;
+		}
 	}
 
 	//tprt
+	
 	if (!(pred->tprt.tprt_data = calloc(TPRT_SIZE, sizeof(struct tprt_ent_t))))
 		fatal("cannot allocate tprt");
 	pred->tprt.size = TPRT_SIZE;
+
+	for (i=0; i < pred->tprt.size; i++)
+	{
+		pred->tprt.tprt_data[i].addr = 0;
+		pred->tprt.tprt_data[i].target = 0;
+	}
 
 	//tpht
 	if (!(pred->tpht.tpht_data = calloc(TPHT_SIZE, sizeof(struct tpht_ent_t))))
 		fatal("cannot allocate tpht");
 	pred->tpht.size = TPHT_SIZE;
+
+	for (i=0; i < pred->tpht.size; i++)
+	{
+		pred->tpht.tpht_data[i].next_targ_number = 0;
+	}
 
   case BPredComb:
   case BPred2Level:
@@ -687,8 +700,12 @@ tprt_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t new_target)
 md_addr_t
 tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target)
 {
-	if (!indir_br_addr || !target)
-		panic("No address given");
+	if (!indir_br_addr)
+		panic("No branch address given");
+/*
+	if (!target)
+		panic("No target given");
+*/
 
 	md_addr_t lookup_addr = (target ^ indir_br_addr) % pred->tpht.size;
 
@@ -701,8 +718,8 @@ tpht_lookup(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target)
 void
 tpht_write(struct bpred_t *pred, md_addr_t indir_br_addr, md_addr_t target, md_addr_t new_targ_number)
 {
-	if (!indir_br_addr || !target || !new_targ_number)
-		panic("No address given");
+	if (!indir_br_addr)
+		panic("No branch address given");
 
 	md_addr_t lookup_addr = (target ^ indir_br_addr) % pred->tpht.size;
 
@@ -749,8 +766,10 @@ sbpb_lookup(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next_targe
 {
 	if (!table)
 		panic("SBPB table invalid");
+/*
 	if (!next_target)
 		panic("No target address given");
+*/
 
   md_addr_t index = next_target % pred->sbpb.sets;
 	unsigned int i, old_mru = table->target_pairs[index].pmru;
@@ -775,8 +794,10 @@ sbpb_write_target(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t next
 {
 	if (!table)
 		panic("SBPB table invalid");
+/*
 	if (!next_target)
 		panic("No target address given");
+*/
 
   md_addr_t index = next_target % pred->sbpb.sets;
 	unsigned int i, old_mru = table->target_pairs[index].pmru;
@@ -797,9 +818,10 @@ search_sbpb_pairs(struct bpred_t *pred, struct sbpb_ent_t *table, md_addr_t sear
 {
 	if (!table)
 		panic("SBPB table invalid");
+/*
 	if (!search_target)
 		panic("No target address given");
-
+*/
 	int i;
 	for (i = 0; i < pred->sbpb.sets; i++){
 		if (table->target_pairs[i].address == search_target)
